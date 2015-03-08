@@ -1,0 +1,16 @@
+source http://nuget.org/api/v2
+
+nuget FsLab
+nuget FsLab.Runner
+nuget Deedle
+nuget Deedle.RPlugin
+nuget FSharp.Charting
+nuget FSharp.Data
+nuget Foogle.Charts
+nuget MathNet.Numerics
+nuget MathNet.Numerics.FSharp
+nuget RProvider
+nuget R.NET.Community
+nuget R.NET.Community.FSharp
+nuget FSharp.Compiler.Service
+nuget FSharp.Formatting

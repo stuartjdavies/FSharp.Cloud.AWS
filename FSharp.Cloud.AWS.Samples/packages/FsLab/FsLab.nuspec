@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>FsLab</id>
+    <version>0.1.3</version>
+    <authors>F# Data Science Working Group</authors>
+    <owners>F# Data Science Working Group</owners>
+    <licenseUrl>http://github.com/tpetricek/FsLab/blob/master/LICENSE.md</licenseUrl>
+    <projectUrl>http://www.fslab.org</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/tpetricek/FsLab/master/misc/logo.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>FsLab is a single package that gives you all you need for doing data science with F#. FsLab includes explorative data manipulation library, type providers for easy data access, simple charting library, support for integration with R and numerical computing libraries. All available in a single package and ready to use!</description>
+    <summary>F# Data science package</summary>
+    <releaseNotes>Recover Latex support in FsLab Journal.</releaseNotes>
+    <copyright>Copyright 2014</copyright>
+    <language>en-US</language>
+    <tags>F# fsharp deedle series statistics data science r type provider mathnet</tags>
+    <dependencies>
+      <dependency id="Deedle" version="[1.0.7]" />
+      <dependency id="Deedle.RPlugin" version="[1.0.7]" />
+      <dependency id="FSharp.Charting" version="[0.90.9]" />
+      <dependency id="FSharp.Data" version="[2.1.1]" />
+      <dependency id="Foogle.Charts" version="[0.0.4]" />
+      <dependency id="MathNet.Numerics" version="[3.5.0]" />
+      <dependency id="MathNet.Numerics.FSharp" version="[3.5.0]" />
+      <dependency id="RProvider" version="[1.1.8]" />
+      <dependency id="R.NET.Community" version="[1.5.16]" />
+      <dependency id="R.NET.Community.FSharp" version="[0.1.9]" />
+    </dependencies>
+  </metadata>
+</package>
