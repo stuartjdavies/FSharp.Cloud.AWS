@@ -7,17 +7,40 @@ open System
 
 type AWSCred = CsvProvider<"""AwsCredentials.csv""">
 
-module AWSCredentials =         
-        let parseCsv (fileName : string) =                  
+type AwsWorkflowFailureType =
+     | AwsException of e : Exception
+     | AwsFailureMessage of code : int * message : string
+
+type AwsWorkflowResult<'T> =
+        | AwsWorkflowSuccessResult of 'T
+        | AwsWorkflowFailureResult of ft : AwsWorkflowFailureType
+
+type AwsWorkflowBuilder() =
+        member this.Bind(x, f) = 
+                    match(x) with
+                    | AwsWorkflowSuccessResult x -> f(x) 
+                    | AwsWorkflowFailureResult x -> AwsWorkflowFailureResult x                     
+        //member this.Delay(f) = f()
+        member this.Return(x) = x 
+        member this.ReturnFrom(x) = AwsWorkflowSuccessResult(x)
+
+module AwsUtils = 
+        let AwsWorkflow = new AwsWorkflowBuilder()
+
+        let ReturnAwsWorkflowResult2(r : _ ) =  
+                 try    
+                    AwsWorkflowSuccessResult(r())  
+                 with 
+                 | ex -> AwsWorkflowFailureResult(AwsException(ex))
+
+        //let RunAwsWorkflowAndDisplayResult ()
+
+        let getCredFromCsvFile (fileName : string) =                  
             let cred = (AWSCred.Load(fileName).Rows |> Seq.nth 0) 
-            cred.``Access Key Id``, cred.``Secret Access Key``  
+            cred.``Access Key Id``, cred.``Secret Access Key`` 
+       
             
-
-type AWSResponseFailure =
-     | AWSException of Exception
-
-type AWSResponse<'T> =
-        | Success of 'T
-        | Failure of AWSResponseFailure
+         
+            
 
 

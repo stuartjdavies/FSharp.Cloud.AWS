@@ -9,6 +9,8 @@ open Amazon.Util
 open System.Threading
 open Amazon.DynamoDBv2
 open Amazon.DynamoDBv2.DocumentModel
+open FSharp.Cloud.AWS.AwsUtils
+open FSharp.Cloud.AWS.RequirementsChecker
  
 // 
 // DynamoDB Table schema requirements
@@ -83,43 +85,54 @@ type QExpr =
      static member (<||>) (e1, e2) = Or(e1,e2)       
 
 type DynamoDbScan = { From : String; Where : QExpr }
-          
+            
+module DynamoDBTableSchemaValidator =           
+           let holdsTrueForAllItems (cond : ('a -> bool)) (xs : 'a seq) =                        
+                    not (xs |> Seq.exists(fun x -> not (cond(x))))   
+
+           let doesHashIndexColumnsExist (index : DynamoDBHashIndex) (columns : ColumnTypeMap) = 
+                    match index with
+                    | Hash(h) -> columns.ContainsKey(h)
+                    | HashAndRange(h,r) -> columns.ContainsKey(h) && 
+                                             columns.ContainsKey(r)
+
+           let doesStringHaveOnlyLettersAndDigits (s : string) = 
+                    s |> Seq.toList |> holdsTrueForAllItems Char.IsLetterOrDigit     
+           
+           let doesColumnNamesContainsValidCharacters s = 
+                    s.GlobalSecondaryIndexes 
+                    |> Seq.map (fun index -> index.Index)        
+                    |> holdsTrueForAllItems(fun index -> doesHashIndexColumnsExist index s.Columns )                  
+                                                  
+           let doGlobalIndexColumnNamesExist s = 
+                    s.GlobalSecondaryIndexes 
+                    |> Seq.map (fun index -> index.Index)        
+                    |> holdsTrueForAllItems(fun index -> doesHashIndexColumnsExist index s.Columns )
+           
+           let SchemaRequirements : (ReqCondition<'a> * ReqValidationMessage) list = 
+                [ "Schema must have a least one column defined" => (fun s -> s.Columns |> Seq.length >= 1) 
+                  "Table name length must be 3 to 30 characters" => (fun s -> s.TableName.Length > 3 && s.TableName.Length > 30)                   
+                  "Table name contains invalid characters" => (fun s -> doesColumnNamesContainsValidCharacters s)                                   
+                  "Table names can only contain letter and digits" => (fun s -> doesStringHaveOnlyLettersAndDigits(s.TableName))                      
+                  "Primary key doesn't exist in columns" =>  (fun s -> doesHashIndexColumnsExist s.PrimaryKey s.Columns) 
+                  "Table must have 0 to 5 global indexes" =>  (fun s -> (s.GlobalSecondaryIndexes |> Seq.length) <= 5) 
+                  "Global index column doesn't exist" => (fun s -> doGlobalIndexColumnNamesExist(s)) 
+                  "Table must have 0 to 5 local indexes" => (fun s -> (s.LocalSecondaryIndexes |> Seq.length) <= 5) ]
+                        
+           let isValid (s : DynamoDBTableSchema) =
+                    RequirementsChecker.check s SchemaRequirements
+
 // 
 // Amazon client factories
 //
 module FDynamoDB = 
-            let createDynamoDbClientFromCsvFile fileName =
-                    let accessKey, secretAccessKey = AWSCredentials.parseCsv fileName
-                    new AmazonDynamoDBClient(accessKey, secretAccessKey, Amazon.RegionEndpoint.APSoutheast2)
+            let createDynamoDbClientFromCsvFile fileName =                    
+                     let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
+                     new AmazonDynamoDBClient(accessKey, secretAccessKey, Amazon.RegionEndpoint.APSoutheast2)
                       
             //
             // Helper methods
-            // 
-            let rec doesTableSchemaPassReqs (s : DynamoDBTableSchema) 
-                                            (rs : DynamoDBTableSchemaRequirement list) =                                         
-                     match rs with
-                     | h::t -> let result = h(s) 
-                               match result with
-                               | ValidTableSchema -> doesTableSchemaPassReqs s t
-                               | InvalidTableSchema(r) -> result
-                     | [] -> ValidTableSchema
-                    
-            let getTableSchemaValidationErrors (s : DynamoDBTableSchema) 
-                                               (rs : DynamoDBTableSchemaRequirement list) =
-                    rs |> List.map(fun r -> r(s))
-
-            let holdsTrueForAllItems (cond : ('a -> bool)) (xs : 'a seq) =                        
-                    not (xs |> Seq.exists(fun x -> not (cond(x))))             
-
-            let doesStringHaveOnlyLettersAndDigits(s : string) = 
-                    s |> Seq.toList |> holdsTrueForAllItems Char.IsLetterOrDigit     
-        
-            let returnValidationResult errorMsg result = 
-                            if (result = true) then
-                              ValidTableSchema
-                            else
-                              InvalidTableSchema errorMsg  
-
+            //                         
             let getAttributeValue (v : obj) = 
                                     match v with
                                     | :? int as n -> new AttributeValue(N=n.ToString())  
@@ -136,8 +149,6 @@ module FDynamoDB =
                                              columns.ContainsKey(r)
 
             let seqToDic (s:('a * 'b) seq) = new Dictionary<'a,'b>(s |> Map.ofSeq)   
-
-         
 
             let getFilterExpr (q : QExpr) =                                     
                       let rec evalQExpr i e =              
@@ -187,82 +198,6 @@ module FDynamoDB =
                     ds |> Array.iter(fun d -> batchWrite.AddDocumentToPut(d))
                     batchWrite.Execute()
                                                                                                                                                                                    
-            //
-            // Validate Columns 
-            //
-            let hasColumns (s : DynamoDBTableSchema) =
-                    ((s.Columns |> Seq.length) >= 1) 
-                    |> returnValidationResult "Schema must have a least one column defined"
-            
-            let doesColumnNamesContainsValidCharacters (s : DynamoDBTableSchema) =
-                  s.Columns |> Seq.map(fun kvp -> kvp.Key) 
-                            |> holdsTrueForAllItems doesStringHaveOnlyLettersAndDigits 
-                            |> returnValidationResult "Table name contains invalid characters"
-            //
-            // Validate table name
-            //
-            let isTableNameLengthValid (s : DynamoDBTableSchema) =
-                  (s.TableName.Length > 5) 
-                  |> returnValidationResult "Table name length must be 3 to 30 characters"
-
-            let doesTableNameContainValidCharacter (s : DynamoDBTableSchema) =
-                  doesStringHaveOnlyLettersAndDigits(s.TableName)
-                  |> returnValidationResult "Table names can only contain letter and digits"  
-
-            //
-            // Validate Primary Key
-            //
-            let doesPrimaryKeyColumnNameExist (s : DynamoDBTableSchema) =       
-                    doesHashIndexColumnsExist s.PrimaryKey s.Columns
-                    |> returnValidationResult "Primary key doesn't exist in columns"
-          
-            //
-            // Validate global indexes         
-            //
-            let isThereZeroToFiveGlobalIndexes (s : DynamoDBTableSchema) =
-                    ((s.GlobalSecondaryIndexes |> Seq.length) <= 5) 
-                    |> returnValidationResult "Table must have 0 to 5 global indexes"
-
-            let doGlobalIndexColumnNamesExist (s : DynamoDBTableSchema) =       
-                    s.GlobalSecondaryIndexes 
-                    |> Seq.map (fun index -> index.Index)        
-                    |> holdsTrueForAllItems(fun index -> doesHashIndexColumnsExist index s.Columns )                  
-                    |> returnValidationResult "Global index column doesn't exist" 
-
-            //
-            // Validate local indexes
-            //
-            let isThereZeroToFiveLocalIndexes (s : DynamoDBTableSchema) =
-                    ((s.LocalSecondaryIndexes |> Seq.length) <= 5)
-                    |> returnValidationResult "Table must have 0 to 5 local indexes"
-
-            let doLocalIndexColumnNamesExist (s : DynamoDBTableSchema) =       
-                    s.LocalSecondaryIndexes 
-                    |> Seq.map (fun index -> index.Index)        
-                    |> holdsTrueForAllItems(fun index -> doesHashIndexColumnsExist index s.Columns)                  
-                    |> returnValidationResult "Local secondary index name does not exist" 
-                                                  
-            //
-            // Build validation groups 
-            //
-            let checkTableNameReqs (s : DynamoDBTableSchema) =
-                 [ isTableNameLengthValid              
-                   doesColumnNamesContainsValidCharacters ]     
-                 |> doesTableSchemaPassReqs s          
-
-            let checkColumnReqs (s : DynamoDBTableSchema) =
-                 [ hasColumns
-                   doesColumnNamesContainsValidCharacters ]     
-                 |> doesTableSchemaPassReqs s          
-
-            let checkIndexReq(s : DynamoDBTableSchema) = 
-                    [ doesPrimaryKeyColumnNameExist          
-                      isThereZeroToFiveGlobalIndexes
-                      doGlobalIndexColumnNamesExist          
-                      isThereZeroToFiveLocalIndexes
-                      doLocalIndexColumnNamesExist ]
-                    |> doesTableSchemaPassReqs s     
-
             let createTable (c : AmazonDynamoDBClient) (s : DynamoDBTableSchema) =                               
                     let STANDARD_READ_CAPACITY_UNITS = (int64 5)
                     let STANDARD_WRITE_CAPACITY_UNITS = (int64 6)
@@ -316,11 +251,12 @@ module FDynamoDB =
                                                     g)
                             |> (fun items -> new List<_>(items))       
                                         
+                    
                     new CreateTableRequest(TableName=s.TableName, KeySchema=createKeySchema(s.PrimaryKey),
-                                           AttributeDefinitions=createAttributeDefinitions(),  
-                                           LocalSecondaryIndexes=createLocalSecondaryIndexes(),
-                                           GlobalSecondaryIndexes=createGlobalSecondaryIndexes(),                                  
-                                           ProvisionedThroughput=createProvisionThroughPut(s.ProvisionedCapacity))
+                                                             AttributeDefinitions=createAttributeDefinitions(),  
+                                                             LocalSecondaryIndexes=createLocalSecondaryIndexes(),
+                                                             GlobalSecondaryIndexes=createGlobalSecondaryIndexes(),                                  
+                                                             ProvisionedThroughput=createProvisionThroughPut(s.ProvisionedCapacity))
                     |> c.CreateTable
                 
         
@@ -346,29 +282,8 @@ module FDynamoDB =
             let deleteTable (c : AmazonDynamoDBClient) (tableName : string) =
                     c.DeleteTable tableName
 
-            let getTableInfo tableName (c : AmazonDynamoDBClient) =  
+            let getTableInfo (c : AmazonDynamoDBClient) tableName=  
                     c.DescribeTable(tableName=tableName).Table
 
             let getListOfTableNames (c : AmazonDynamoDBClient) =
-                    c.ListTables().TableNames 
-
-            let getAllTableInfos (c : AmazonDynamoDBClient) =
-                    c |> getListOfTableNames |> Seq.map (fun tn -> c.DescribeTable(tableName=tn))
-
-
-            let printTableSummary (c: AmazonDynamoDBClient) =
-                    let tableNames = c |> getListOfTableNames 
-                    printfn "Table names"
-                    printfn "-----------"     
-                    tableNames |> Seq.iteri(fun i t -> printfn "%d. %s" i t)
-
-            let printTableInfo tableName (c : AmazonDynamoDBClient) =        
-                    printfn "Table Summary"
-                    printfn "-------------"
-                    getTableInfo tableName c 
-                    |> (fun info -> 
-                                printfn "Name: %s" info.TableName
-                                printfn "# of items: %d" info.ItemCount
-                                printfn "Provision Throughput (reads/sec): %d" info.ProvisionedThroughput.ReadCapacityUnits
-                                printfn "Provision Throughput (writes/sec): %d" info.ProvisionedThroughput.WriteCapacityUnits
-                                ())
+                    c.ListTables().TableNames

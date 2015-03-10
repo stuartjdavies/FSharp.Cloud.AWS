@@ -14,49 +14,51 @@
 open FSharp.Cloud.AWS
 open Amazon.EC2
 open Amazon.EC2.Model
-
+open FSharp.Cloud.AWS.AwsUtils
+         
+(** Create ec2 client **)
 let ec2Client = FEc2.createEC2ClientFromCsvFile("""c:\AWS\Stuart.Credentials.csv""")
 
 (** Create a new VPC **)
-let vpcId = { CreateNewVPCRequest.Name = "My Test VPC";
-                                  CidrBlock = "10.20.0.0/24"; 
-                                  InstanceTenancy = Tenancy.Default } 
-            |> FEc2.createNewVPC ec2Client
+let vpcId, _ = FEc2.createVpc ec2Client "10.20.0.0/24" Tenancy.Default "My Test VPC"
 
 (** Enable DNS Support & Hostnames in VPC **)
-ec2Client.ModifyVpcAttribute(new ModifyVpcAttributeRequest(EnableDnsSupport=true,VpcId=vpcId))
-ec2Client.ModifyVpcAttribute(new ModifyVpcAttributeRequest(EnableDnsHostnames=true,VpcId=vpcId))
-
-
+FEc2.enableVpcDnsSupport ec2Client vpcId true
+FEc2.enableVpcDnsHostnames ec2Client vpcId true
+           
 (** Create new Internet Gateway **)
-let internetGatewayId = ec2Client.CreateInternetGateway(new CreateInternetGatewayRequest()).InternetGateway.InternetGatewayId
+let internetGatewayId, _ = FEc2.createInternetGatway ec2Client
 printfn "Internet Gateway ID : %s" internetGatewayId
 
 (** Attach Internet Gateway to VPC **)
-ec2Client.AttachInternetGateway(new AttachInternetGatewayRequest(InternetGatewayId=internetGatewayId,VpcId=vpcId))
+FEc2.attachInternetGateway ec2Client vpcId internetGatewayId
 
 (** Create new Route Table **)
-let routeTableId = ec2Client.CreateRouteTable(new CreateRouteTableRequest(VpcId=vpcId)).RouteTable.RouteTableId
-printfn "Route Table ID %s" routeTableId
-
+let routeTableId, _ = FEc2.createRouteTable ec2Client vpcId
+printfn "Route Table ID %s" routeTableId        
+        
 (** Create new Route **)
-ec2Client.CreateRoute(new CreateRouteRequest(RouteTableId=routeTableId, GatewayId=internetGatewayId, DestinationCidrBlock="0.0.0.0/0" ))
+let createRouteResponse = FEc2.createRoute ec2Client routeTableId internetGatewayId "0.0.0.0/0"
 
 (** Create Subnet1 & associate route table **)
-let sn1Id = ec2Client.CreateSubnet(new CreateSubnetRequest(VpcId=vpcId, CidrBlock="10.20.1.0/24", AvailabilityZone="ap-southeast-2b")).Subnet.SubnetId
+let sn1Id, _ = FEc2.createSubnet ec2Client vpcId "10.20.1.0/24" (Some("ap-southeast-2b"))
 printfn "Subnet1 ID : %s" sn1Id
-ec2Client.AssociateRouteTable(new AssociateRouteTableRequest(RouteTableId=routeTableId, SubnetId=sn1Id))
+FEc2.associateSubnetToRouteTable ec2Client routeTableId sn1Id
 
 (** Create Subnet2 & associate route table **) 
-let sn2Id = ec2Client.CreateSubnet(new CreateSubnetRequest(VpcId=vpcId, CidrBlock="10.20.2.0/24",AvailabilityZone="ap-southeast-2a")).Subnet.SubnetId
+let sn2Id, _ = FEc2.createSubnet ec2Client vpcId "10.20.1.0/24" (Some("ap-southeast-2b"))
 printfn "Subnet2 ID : %s" sn1Id
-ec2Client.AssociateRouteTable(new AssociateRouteTableRequest(RouteTableId=routeTableId, SubnetId=sn1Id))
+FEc2.associateSubnetToRouteTable ec2Client routeTableId sn1Id
 
-ec2Client.DeleteSubnet(new DeleteSubnetRequest(SubnetId="subnet-ff15cb9a"))
-ec2Client.DeleteSubnet(new DeleteSubnetRequest("10.0.1.0/16"))
+(** Delete Subnet **)
+FEc2.deleteSubnet ec2Client sn1Id
+FEc2.deleteSubnet ec2Client sn2Id
 
 printfn "VPC Setup Finished"
 
 (** Delete the VPC instance **) 
 printfn "Delete VPC"
-ec2Client.DeleteVpc(new DeleteVpcRequest(vpcId))
+FEc2.deleteVpc ec2Client vpcId          
+
+
+

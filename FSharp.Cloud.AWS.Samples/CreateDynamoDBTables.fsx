@@ -6,6 +6,7 @@ FsLab Experiment
 ================
 *)
 open FSharp.Cloud.AWS
+open FSharp.Cloud.AWS.AwsUtils
 
 let dynamoDbClient= FDynamoDB.createDynamoDbClientFromCsvFile("""c:\AWS\Stuart.Credentials.csv""")
 
@@ -47,7 +48,6 @@ let newTables = [ { DynamoDBTableSchema.TableName = "PurchaseOrders";
                                                                           ProvisionedCapacity=Standard } ]; 
                                         LocalSecondaryIndexes = Set.empty; }; ]
 
-(** Create the tables in dynamoDb **)
 newTables |> Seq.map(fun t -> t |> FDynamoDB.createTable dynamoDbClient) 
           |> Seq.iter(fun r -> printfn "Created Table %s" r.TableDescription.TableName)
 
