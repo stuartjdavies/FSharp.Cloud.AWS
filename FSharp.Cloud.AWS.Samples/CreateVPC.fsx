@@ -38,7 +38,7 @@ let routeTableId, _ = FEc2.createRouteTable ec2Client vpcId
 printfn "Route Table ID %s" routeTableId        
         
 (** Create new Route **)
-let createRouteResponse = FEc2.createRoute ec2Client routeTableId internetGatewayId "0.0.0.0/0"
+FEc2.createRoute ec2Client routeTableId internetGatewayId "0.0.0.0/0"
 
 (** Create Subnet1 & associate route table **)
 let sn1Id, _ = FEc2.createSubnet ec2Client vpcId "10.20.1.0/24" (Some("ap-southeast-2b"))
