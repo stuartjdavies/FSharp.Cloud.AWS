@@ -75,16 +75,16 @@ type DymamoDBTableSchemaRequirementCheck = | ValidTableSchema | InvalidTableSche
 
 type DynamoDBTableSchemaRequirement = (DynamoDBTableSchema -> DymamoDBTableSchemaRequirementCheck)
   
-type QExpr = 
+type QueryExpr = 
      | Between of c : ColumnName * val1 : obj * val2 : obj 
      | GreaterThan of c : ColumnName * val1 : obj
      | LessThan of c : ColumnName * val1 : obj     
-     | And of e1 : QExpr * e2 : QExpr
-     | Or of e1  : QExpr * e2 : QExpr    
+     | And of e1 : QueryExpr * e2 : QueryExpr
+     | Or of e1  : QueryExpr * e2 : QueryExpr    
      static member (<&&>) (e1, e2) = And(e1,e2) 
      static member (<||>) (e1, e2) = Or(e1,e2)       
 
-type DynamoDbScan = { From : String; Where : QExpr }
+type DynamoDbScan = { From : String; Where : QueryExpr }
             
 module DynamoDBTableSchemaValidator =           
            let holdsTrueForAllItems (cond : ('a -> bool)) (xs : 'a seq) =                        
@@ -150,7 +150,7 @@ module FDynamoDB =
 
             let seqToDic (s:('a * 'b) seq) = new Dictionary<'a,'b>(s |> Map.ofSeq)   
 
-            let getFilterExpr (q : QExpr) =                                     
+            let getFilterExpr (q : QueryExpr) =                                     
                       let rec evalQExpr i e =              
                                 match e with
                                 | Between(c, v1, v2) -> (i + 2), sprintf "(%s between :val%d and :val%d)" c (i + 1) (i + 2)
@@ -161,7 +161,7 @@ module FDynamoDB =
                                                                i2, (sprintf "(%s and %s)" s1 s2)                    
                       evalQExpr 0 q |> snd
 
-            let getFilterValues (q : QExpr) =                                              
+            let getFilterValues (q : QueryExpr) =                                              
                       let rec evalQExpr i e =              
                                 match e with
                                 | Between(c, v1, v2) -> (i + 2), [ (sprintf ":val%d" (i + 1)), getAttributeValue v1

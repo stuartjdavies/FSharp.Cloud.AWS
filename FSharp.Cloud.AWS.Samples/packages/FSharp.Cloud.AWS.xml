@@ -413,7 +413,7 @@
 <member name="">
 
 </member>
-<member name="T:FSharp.Cloud.AWS.Req">
+<member name="T:FSharp.Cloud.AWS.RequirementsChecker">
 
 </member>
 </members>
