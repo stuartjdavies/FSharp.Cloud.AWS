@@ -135,12 +135,12 @@ module FDynamoDB =
             //                         
             let getAttributeValue (v : obj) = 
                                     match v with
-                                    | :? int as n -> new AttributeValue(N=n.ToString())  
-                                    | :? float as n -> new AttributeValue(N=n.ToString())  
-                                    | :? decimal as n -> new AttributeValue(N=n.ToString())   
-                                    | :? string as s -> new AttributeValue(S=s)
-                                    | :? DateTime as d -> new AttributeValue(S=d.ToString())
-                                    | _ -> raise(new Exception("Unsupported data type"))
+                                    | :? int as n -> AttributeValue(N=n.ToString())  
+                                    | :? float as n -> AttributeValue(N=n.ToString())  
+                                    | :? decimal as n -> AttributeValue(N=n.ToString())   
+                                    | :? string as s -> AttributeValue(S=s)
+                                    | :? DateTime as d -> AttributeValue(S=d.ToString())
+                                    | _ -> raise(Exception("Unsupported data type"))
                                 
             let doesHashIndexColumnsExist (index : DynamoDBHashIndex) (columns : ColumnTypeMap) = 
                     match index with
@@ -148,7 +148,7 @@ module FDynamoDB =
                     | HashAndRange(h,r) -> columns.ContainsKey(h) && 
                                              columns.ContainsKey(r)
 
-            let seqToDic (s:('a * 'b) seq) = new Dictionary<'a,'b>(s |> Map.ofSeq)   
+            let seqToDic (s:('a * 'b) seq) = Dictionary<'a,'b>(s |> Map.ofSeq)   
 
             let getFilterExpr (q : QueryExpr) =                                     
                       let rec evalQExpr i e =              
@@ -173,7 +173,7 @@ module FDynamoDB =
                       evalQExpr 0 q |> snd
 
             let runScan (c : AmazonDynamoDBClient) q =
-                   let sr = new ScanRequest()                                                                                                        
+                   let sr = ScanRequest()                                                                                                        
                    sr.TableName <- q.From 
                    sr.Select <- Select.ALL_ATTRIBUTES
                    sr.ExpressionAttributeValues <- getFilterValues q.Where |> seqToDic
@@ -181,14 +181,14 @@ module FDynamoDB =
                    c.Scan(sr).Items                      
 
             let toDocument (rds : (string * DynamoDBEntry) seq ) =
-                    new Document((seqToDic rds))
+                    Document((seqToDic rds))
 
             let toDynamoDbEntry (v : 'T) = 
                       let success, v = DynamoDBEntryConversion.V2.TryConvertToEntry(v)
                       if success = true then
                         v
                       else
-                        raise(new Exception("Invalid value"))  
+                        raise(Exception("Invalid value"))  
 
             let inline (==>) (k : string) (v : 'T) = (k,  toDynamoDbEntry(v)) 
 
@@ -204,9 +204,9 @@ module FDynamoDB =
 
                     let createProvisionThroughPut (c: DynamoDBProvisionedCapacity) =
                            match c with
-                           | Standard -> new ProvisionedThroughput(STANDARD_READ_CAPACITY_UNITS,
+                           | Standard -> ProvisionedThroughput(STANDARD_READ_CAPACITY_UNITS,
                                                                    STANDARD_WRITE_CAPACITY_UNITS)                               
-                           | Custom(r, w) -> new ProvisionedThroughput(r, w)                               
+                           | Custom(r, w) -> ProvisionedThroughput(r, w)                               
                
                     let createScalarAttributeType (t : DynamoDBIndexColumnType) =                
                             match t with
@@ -222,37 +222,37 @@ module FDynamoDB =
                         
                     let createAttributeDefinitions() =                    
                                s.Columns 
-                               |> Seq.map(fun kvps -> new AttributeDefinition(kvps.Key, createScalarAttributeType kvps.Value))
-                               |> (fun items -> new List<_>(items))
+                               |> Seq.map(fun kvps -> AttributeDefinition(kvps.Key, createScalarAttributeType kvps.Value))
+                               |> (fun items -> List<_>(items))
                 
                     let createKeySchema (index : DynamoDBHashIndex ) =                
                             (match index with
-                             | Hash h -> [ new KeySchemaElement(AttributeName=h, KeyType=KeyType.HASH) ]
-                             | HashAndRange(h, r) -> [new KeySchemaElement(AttributeName=h,KeyType=KeyType.HASH);
-                                                        new KeySchemaElement(AttributeName=r,KeyType=KeyType.RANGE) ])                                                                        
-                            |> (fun items -> new List<_>(items))
+                             | Hash h -> [ KeySchemaElement(AttributeName=h, KeyType=KeyType.HASH) ]
+                             | HashAndRange(h, r) -> [ KeySchemaElement(AttributeName=h,KeyType=KeyType.HASH);
+                                                        KeySchemaElement(AttributeName=r,KeyType=KeyType.RANGE) ])                                                                        
+                            |> (fun items -> List<_>(items))
 
                     let createLocalSecondaryIndexes() =
                            s.LocalSecondaryIndexes 
-                           |> Seq.map(fun index -> new LocalSecondaryIndex(IndexName=index.Name,
-                                                                         KeySchema=createKeySchema(index.Index),
-                                                                         Projection=new Projection(ProjectionType=createProjectectionType(index.ProjectionType), 
-                                                                                                   NonKeyAttributes=new List<_>(index.NonKeyAttributes))))                                     
-                           |> (fun items -> new List<_>(items))                       
+                           |> Seq.map(fun index -> LocalSecondaryIndex(IndexName=index.Name,
+                                                                       KeySchema=createKeySchema(index.Index),
+                                                                       Projection=Projection(ProjectionType=createProjectectionType(index.ProjectionType), 
+                                                                                                   NonKeyAttributes=List<_>(index.NonKeyAttributes))))                                     
+                           |> (fun items -> List<_>(items))                       
 
                     let createGlobalSecondaryIndexes() =
                             s.GlobalSecondaryIndexes 
-                            |> Seq.map(fun index -> let g=new GlobalSecondaryIndex()
+                            |> Seq.map(fun index -> let g=GlobalSecondaryIndex()
                                                     g.IndexName <- index.Name
                                                     g.KeySchema <- createKeySchema(index.Index)
-                                                    g.Projection <- new Projection(ProjectionType=createProjectectionType(index.ProjectionType), 
-                                                                                   NonKeyAttributes=new List<_>(index.NonKeyAttributes))
+                                                    g.Projection <- Projection(ProjectionType=createProjectectionType(index.ProjectionType), 
+                                                                                   NonKeyAttributes=List<_>(index.NonKeyAttributes))
                                                     g.ProvisionedThroughput <- createProvisionThroughPut(Standard)
                                                     g)
-                            |> (fun items -> new List<_>(items))       
+                            |> (fun items -> List<_>(items))       
                                         
                     
-                    new CreateTableRequest(TableName=s.TableName, KeySchema=createKeySchema(s.PrimaryKey),
+                    CreateTableRequest(TableName=s.TableName, KeySchema=createKeySchema(s.PrimaryKey),
                                                              AttributeDefinitions=createAttributeDefinitions(),  
                                                              LocalSecondaryIndexes=createLocalSecondaryIndexes(),
                                                              GlobalSecondaryIndexes=createGlobalSecondaryIndexes(),                                  
@@ -265,7 +265,7 @@ module FDynamoDB =
                     let rec aux(tblName) =                                  
                                 Thread.Sleep(millisecondsTimeout=intervalMilliseconts) // Wait 5 seconds.
                                 try                
-                                    let res = c.DescribeTable(request=new DescribeTableRequest(TableName=tableName))
+                                    let res = c.DescribeTable(request=DescribeTableRequest(TableName=tableName))
                     
                                     printfn "Table name: %s, status: %s" res.Table.TableName (res.Table.TableStatus.ToString())
                                                                   
