@@ -23,12 +23,11 @@ let ec2Client = FEc2.createEC2ClientFromCsvFile("""c:\AWS\Stuart.Credentials.csv
 (** Create a new VPC **)
 let vpcId = ec2Client.CreateVpc(CreateVpcRequest(CidrBlock="10.20.0.0/24", InstanceTenancy=Tenancy.Default))
                      .Vpc.VpcId                     
-ec2Client.CreateTags(new CreateTagsRequest(Resources=List<string>([vpcId]), 
-                                           Tags=List<Tag>([ Tag("Name", "My Test VPC") ])))
-                        
-(** Enable DNS Support & Hostnames in VPC **)
+ec2Client.CreateTags(CreateTagsRequest(Resources=List<string>([vpcId]), Tags=List<Tag>([ Tag("Name", "My Test VPC") ])))
+
+(** Update vpc attributes **)                             
 ec2Client.ModifyVpcAttribute(ModifyVpcAttributeRequest(EnableDnsSupport=true,VpcId=vpcId))
-ec2Client.ModifyVpcAttribute(ModifyVpcAttributeRequest(EnableDnsHostnames=true,VpcId=vpcId))                
+ec2Client.ModifyVpcAttribute(ModifyVpcAttributeRequest(EnableDnsHostnames=true,VpcId=vpcId))           
            
 (** Create new Internet Gateway **)
 let internetGatewayId = ec2Client.CreateInternetGateway(CreateInternetGatewayRequest())
@@ -42,7 +41,7 @@ ec2Client.AttachInternetGateway(AttachInternetGatewayRequest(VpcId=vpcId, Intern
 let routeTableId = ec2Client.CreateRouteTable(CreateRouteTableRequest(VpcId=vpcId)) 
                             .RouteTable.RouteTableId
 printfn "Route Table ID %s" routeTableId        
-        
+                                   
 (** Create new Route **)
 ec2Client.CreateRoute(CreateRouteRequest(RouteTableId=routeTableId, GatewayId=internetGatewayId, 
                                          DestinationCidrBlock="0.0.0.0/0")) 
