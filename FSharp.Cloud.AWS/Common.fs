@@ -24,6 +24,17 @@ type AwsWorkflowBuilder() =
         member this.Return(x) = x 
         member this.ReturnFrom(x) = AwsWorkflowSuccessResult(x)
 
+type ListFromZeroToFive<'T> =
+        val Indexes : 'T list
+        new () = { Indexes = [] }
+        new (item1 : 'T) = { Indexes = [ item1 ] }
+        new (item1, item2) = { Indexes = [item1; item2; ] }        
+        new (item1, item2, index3) = { Indexes = [item1; item2; index3] }
+        new (item1, item2, item3, item4) = { Indexes = [item1; item2; item3; item4] }
+        new (item1, item2, item3, item4, item5) = { Indexes = [item1; item2; item3; item4; item5] }
+        static member empty = ListFromZeroToFive<'T>()
+
+
 module AwsUtils = 
         let AwsWorkflow = new AwsWorkflowBuilder()
 

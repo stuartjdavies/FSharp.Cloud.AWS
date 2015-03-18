@@ -60,13 +60,15 @@ type LocalIndex = { Name : IndexName;
                     Index : DynamoDBHashIndex; 
                     NonKeyAttributes : NonKeyAttributes;
                     ProjectionType : DynamoDBProjectionType }
-                    
+
+type IndexList<'T> = ListFromZeroToFive<'T>                   
+
 type DynamoDBTableSchema = {
         TableName : string;
         Columns : ColumnTypeMap;
         PrimaryKey : DynamoDBHashIndex;        
-        GlobalSecondaryIndexes : GlobalIndex Set;
-        LocalSecondaryIndexes : LocalIndex Set;
+        GlobalSecondaryIndexes : IndexList<GlobalIndex>;
+        LocalSecondaryIndexes : IndexList<LocalIndex>;
         ProvisionedCapacity : DynamoDBProvisionedCapacity;                
 }
 
@@ -100,12 +102,12 @@ module DynamoDBTableSchemaValidator =
                     s |> Seq.toList |> holdsTrueForAllItems Char.IsLetterOrDigit     
            
            let doesColumnNamesContainsValidCharacters s = 
-                    s.GlobalSecondaryIndexes 
+                    s.GlobalSecondaryIndexes.Indexes 
                     |> Seq.map (fun index -> index.Index)        
                     |> holdsTrueForAllItems(fun index -> doesHashIndexColumnsExist index s.Columns )                  
                                                   
            let doGlobalIndexColumnNamesExist s = 
-                    s.GlobalSecondaryIndexes 
+                    s.GlobalSecondaryIndexes.Indexes 
                     |> Seq.map (fun index -> index.Index)        
                     |> holdsTrueForAllItems(fun index -> doesHashIndexColumnsExist index s.Columns )
            
@@ -115,9 +117,7 @@ module DynamoDBTableSchemaValidator =
                   "Table name contains invalid characters" => (fun s -> doesColumnNamesContainsValidCharacters s)                                   
                   "Table names can only contain letter and digits" => (fun s -> doesStringHaveOnlyLettersAndDigits(s.TableName))                      
                   "Primary key doesn't exist in columns" =>  (fun s -> doesHashIndexColumnsExist s.PrimaryKey s.Columns) 
-                  "Table must have 0 to 5 global indexes" =>  (fun s -> (s.GlobalSecondaryIndexes |> Seq.length) <= 5) 
-                  "Global index column doesn't exist" => (fun s -> doGlobalIndexColumnNamesExist(s)) 
-                  "Table must have 0 to 5 local indexes" => (fun s -> (s.LocalSecondaryIndexes |> Seq.length) <= 5) ]
+                  "Global index column doesn't exist" => (fun s -> doGlobalIndexColumnNamesExist(s)) ]
                         
            let isValid (s : DynamoDBTableSchema) =
                     RequirementsChecker.check s SchemaRequirements
@@ -233,7 +233,7 @@ module FDynamoDB =
                             |> (fun items -> List<_>(items))
 
                     let createLocalSecondaryIndexes() =
-                           s.LocalSecondaryIndexes 
+                           s.LocalSecondaryIndexes.Indexes
                            |> Seq.map(fun index -> LocalSecondaryIndex(IndexName=index.Name,
                                                                        KeySchema=createKeySchema(index.Index),
                                                                        Projection=Projection(ProjectionType=createProjectectionType(index.ProjectionType), 
@@ -241,7 +241,7 @@ module FDynamoDB =
                            |> (fun items -> List<_>(items))                       
 
                     let createGlobalSecondaryIndexes() =
-                            s.GlobalSecondaryIndexes 
+                            s.GlobalSecondaryIndexes.Indexes 
                             |> Seq.map(fun index -> let g=GlobalSecondaryIndex()
                                                     g.IndexName <- index.Name
                                                     g.KeySchema <- createKeySchema(index.Index)

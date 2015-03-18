@@ -19,15 +19,15 @@ type Stocks = CsvProvider<"C:\Users\stuart\Documents\GitHub\FSharp.CodeSnippets\
 let msft = Stocks.Load("http://ichart.finance.yahoo.com/table.csv?s=MSFT").Cache()
 let msftRows = msft.Rows |> Seq.take 1000 |> Seq.toArray
 
-let dynamoDbClient = FDynamoDB.createDynamoDbClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""")
+let dynamoDbClient = FDynamoDB.createDynamoDbClientFromCsvFile """c:\AWS\Stuart.Credentials.csv"""
 
 (** Create Amazon Client string **)
 { DynamoDBTableSchema.TableName = "MicrosoftStockPrices";
                       Columns = Map [ ("ODate", ScalarTypeString) ];                            
                       PrimaryKey = Hash("ODate");                                  
                       ProvisionedCapacity=Standard;
-                      GlobalSecondaryIndexes=Set.empty;
-                      LocalSecondaryIndexes=Set.empty } 
+                      GlobalSecondaryIndexes=IndexList.empty;
+                      LocalSecondaryIndexes=IndexList.empty } 
 |> FDynamoDB.createTable dynamoDbClient
 
 FDynamoDB.waitUntilTableIsCreated "MicrosoftStockPrices" 3000 dynamoDbClient

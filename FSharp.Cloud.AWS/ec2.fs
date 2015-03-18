@@ -13,22 +13,22 @@ type Subnet = Subnet of name : string * CidrBlock : string * AvailabilityZone : 
 type InternetGateway = InternetGateway of id : String option             
 type RouteTable = RouteTable of id : string option
 
-type Vpc = {
-        Id : string; Name : string; InstanceTencacy : Tenancy    
-        Subnets : Subnet list;  
-     } 
+//type Vpc = {
+//        Id : string; Name : string; InstanceTencacy : Tenancy    
+//        Subnets : Subnet list;  
+//     } 
+//
+//type AWSCommand<'a> =
+//
+//CreateVPCWith [ InternetGateway 
 
-type AWSCommand<'a> =
 
-CreateVPCWith [ InternetGateway 
-
-
-type VpcOption =
-        | InternetGateway 
-        | RouteTable 
-        | Subnets of subnets list Subnet
-        | DnsSupport of Enable : bool
-        | DnsHostNames of Enabled : bool
+//type VpcOption =
+//        | InternetGateway 
+//        | RouteTable 
+//        | Subnets of subnets list Subnet
+//        | DnsSupport of Enable : bool
+//        | DnsHostNames of Enabled : bool
 
 
 
@@ -38,24 +38,24 @@ type CreateNewVPCRequest = { Name : String;
 
 type FSecurityGroupFilter = FSecurityGroupFilter of name : string * values : string list
 
-module FIam =
-         let describeSecruityGroups (c : AmazonEC2Client) =
-                let r = new DescribeSecurityGroupsRequest() |> c.DescribeSecurityGroups 
-                r.SecurityGroups, r
-
-         let describeSecruityGroupsBy (c : AmazonEC2Client) (fs : FSecurityGroupFilter seq) =                               
-                let filters = (List<Filter> (Seq.map(fun (FSecurityGroupFilter(n, vs)) -> new Filter(n, (List vs))) fs))
-                let r = new DescribeSecurityGroupsRequest(Filters=filters) |> c.DescribeSecurityGroups
-                r.SecurityGroups, r
-                c.
-
-         // let createSecurityGroupRequest (c : AmazonEC2Client) groupName description vpcId =                 
-                
-         let terminateEc2Instance (c : AmazonEC2Client) (instanceIds : string list) =
-                let r = new TerminateInstancesRequest(
-                                    InstanceIds= (List<string> instanceIds)) |> c.TerminateInstances
-                r.TerminatingInstances |> Seq.toList, r              
-                
+//module FIam =
+//         let describeSecruityGroups (c : AmazonEC2Client) =
+//                let r = new DescribeSecurityGroupsRequest() |> c.DescribeSecurityGroups 
+//                r.SecurityGroups, r
+//
+//         let describeSecruityGroupsBy (c : AmazonEC2Client) (fs : FSecurityGroupFilter seq) =                               
+//                let filters = (List<Filter> (Seq.map(fun (FSecurityGroupFilter(n, vs)) -> new Filter(n, (List vs))) fs))
+//                let r = new DescribeSecurityGroupsRequest(Filters=filters) |> c.DescribeSecurityGroups
+//                r.SecurityGroups, r
+//                c.
+//
+//         // let createSecurityGroupRequest (c : AmazonEC2Client) groupName description vpcId =                 
+//                
+//         let terminateEc2Instance (c : AmazonEC2Client) (instanceIds : string list) =
+//                let r = new TerminateInstancesRequest(
+//                                    InstanceIds= (List<string> instanceIds)) |> c.TerminateInstances
+//                r.TerminatingInstances |> Seq.toList, r              
+//                
         
 
 
