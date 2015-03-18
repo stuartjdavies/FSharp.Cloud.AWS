@@ -12,22 +12,22 @@ let dynamoDbClient= FDynamoDB.createDynamoDbClientFromCsvFile("""c:\AWS\Stuart.C
 
 (** Create a list of new tables to create *)
 let newTables = [ { DynamoDBTableSchema.TableName = "PurchaseOrders";
-                                        Columns = Map [ ("Id", ScalarTypeString)];
-                                        PrimaryKey = Hash("Id");  
+                                        Columns = Map [ "Id", ScalarTypeString ];
+                                        PrimaryKey = Hash "Id";  
                                         ProvisionedCapacity=Standard;
                                         GlobalSecondaryIndexes =  IndexList.empty;
                                         LocalSecondaryIndexes = IndexList.empty }; 
                   { DynamoDBTableSchema.TableName = "SalesOrders";
-                                        Columns = Map [ ("Id", ScalarTypeString); 
-                                                        ("DateSold", ScalarTypeString) ];                          
+                                        Columns = Map [ "Id", ScalarTypeString ; 
+                                                        "DateSold", ScalarTypeString ];                          
                                         PrimaryKey = HashAndRange("Id", "DateSold");                                                                          
                                         ProvisionedCapacity=Standard;  
                                         GlobalSecondaryIndexes = IndexList.empty;
                                         LocalSecondaryIndexes = IndexList.empty;  }; 
                   { DynamoDBTableSchema.TableName = "MusicCollection";
-                                        Columns = Map [ ("Artist", ScalarTypeString); 
-                                                        ("SongTitle", ScalarTypeString); 
-                                                        ("AlbumTitle", ScalarTypeString) ];                           
+                                        Columns = Map [ "Artist", ScalarTypeString; 
+                                                        "SongTitle", ScalarTypeString; 
+                                                        "AlbumTitle", ScalarTypeString ];                           
                                         PrimaryKey = HashAndRange("Artist", "SongTitle");                                  
                                         ProvisionedCapacity=Standard;
                                         GlobalSecondaryIndexes = IndexList.empty;
@@ -36,15 +36,15 @@ let newTables = [ { DynamoDBTableSchema.TableName = "PurchaseOrders";
                                                                                    NonKeyAttributes= Set ["Genre"; "Year"];
                                                                                    ProjectionType=IncludeOnly }) }; 
                   { DynamoDBTableSchema.TableName = "WeatherData";
-                                        Columns = Map [ ("Location", ScalarTypeString); 
-                                                        ("Date", ScalarTypeString); 
-                                                        ("Precipitation", ScalarTypeNumber) ];                            
+                                        Columns = Map [ "Location", ScalarTypeString; 
+                                                        "Date", ScalarTypeString; 
+                                                        "Precipitation", ScalarTypeNumber ];                            
                                         PrimaryKey = HashAndRange("Location", "Date");                                  
                                         ProvisionedCapacity=Standard;
                                         GlobalSecondaryIndexes = IndexList({ GlobalIndex.Name="PrecipIndex";
                                                                                       Index=HashAndRange("Date", "Precipitation");                                                
                                                                                       ProjectionType=All;
-                                                                                      NonKeyAttributes= Set [];
+                                                                                      NonKeyAttributes= Set.empty;
                                                                                       ProvisionedCapacity=Standard }); 
                                         LocalSecondaryIndexes = IndexList.empty }; ]
 

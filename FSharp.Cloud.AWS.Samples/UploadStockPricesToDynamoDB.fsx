@@ -23,8 +23,8 @@ let dynamoDbClient = FDynamoDB.createDynamoDbClientFromCsvFile """c:\AWS\Stuart.
 
 (** Create Amazon Client string **)
 { DynamoDBTableSchema.TableName = "MicrosoftStockPrices";
-                      Columns = Map [ ("ODate", ScalarTypeString) ];                            
-                      PrimaryKey = Hash("ODate");                                  
+                      Columns = Map [ "ODate", ScalarTypeString ];                            
+                      PrimaryKey = Hash "ODate";                                  
                       ProvisionedCapacity=Standard;
                       GlobalSecondaryIndexes=IndexList.empty;
                       LocalSecondaryIndexes=IndexList.empty } 
