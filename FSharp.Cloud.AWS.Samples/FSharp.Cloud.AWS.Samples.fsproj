@@ -69,7 +69,7 @@
       <SubType>
       </SubType>
     </None>
-    <None Include="CreateVPC.fsx">
+    <None Include="VpcGettingStarted.fsx">
       <SubType>
       </SubType>
     </None>

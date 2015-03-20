@@ -34,11 +34,7 @@ open FSharp.Cloud.AWS.RequirementsChecker
 //        - must contain characters ([ a .. z], [ 0 .. 9])
 //        - must start with a character
 //        - must be from 1 to 20 characters 
-//
-                                              
-//
-// Define the domain model                                                                                                       
-// 
+//                                              
 type ColumnName = string
 type IndexName = string
 type DynamoDBProvisionedCapacity = | Standard | Custom of readCapacity : int64 * writeCapacity : int64                                            
