@@ -21,8 +21,7 @@ type CloudTrailFileSchema = JsonProvider<"""C:\Users\stuart\Documents\GitHub\FSh
 // Thought this would be a good candidate for partial application, 
 // Getting message: Either make the arguments to 'numberOfEventsByEventSource' explicit or, if you do not intend for it to be generic, add a type annotation.
 module FQueryCloudTrail = 
-            let numberOfEventsBy f (es : CloudTrailFileSchema.Record seq) =
-                        es |> Seq.groupBy f |> Seq.map(fun (g, es) -> g, Seq.length es)
+            let numberOfEventsBy f (es : CloudTrailFileSchema.Record seq) = es |> Seq.groupBy f |> Seq.map(fun (g, es) -> g, Seq.length es)
             let numberOfEventsByEventSource es = es |> numberOfEventsBy (fun e  -> e.EventSource)
             let numberOfEventsByEventName es = es |> numberOfEventsBy (fun e -> e.EventName)                                
             let numberOfEventsByEventType es = es |> numberOfEventsBy (fun e -> e.EventType)   

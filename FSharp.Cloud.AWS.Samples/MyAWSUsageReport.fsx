@@ -33,10 +33,7 @@ let events = AwsUtils.getFileNames """C:\AWSCloudTrail"""
              |> Seq.map(fun fn -> CloudTrailFileSchema.Load(fn).Records)
              |> Seq.concat                            
 
-(** Describe the frequency of events per hour **)              
-events |> FQueryCloudTrail.numberOfEventsPerHour       
-       |> Chart.Line             
-                        
+(** Describe the frequency of events per hour **)                                      
 events |> FQueryCloudTrail.numberOfEventsPerDay
        |> Chart.Line     
 
