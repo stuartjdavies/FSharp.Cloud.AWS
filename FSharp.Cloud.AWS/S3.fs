@@ -13,9 +13,9 @@ open System.Runtime.CompilerServices
 open FSharp.Cloud.AWS
 open FSharp.Cloud.AWS.AwsUtils
 
-let createS3ClientFromCsvFile fileName =
+let createClientFromCsvFile fileName (region : Amazon.RegionEndpoint) =
         let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
-        AmazonS3Client(accessKey, secretAccessKey, Amazon.RegionEndpoint.APSoutheast2)  
+        new AmazonS3Client(accessKey, secretAccessKey, region)  
 
 let displayBuckets (c: AmazonS3Client) = 
         c.ListBuckets().Buckets          
@@ -52,16 +52,16 @@ let doesObjectExist (s3Client : AmazonS3Client) bucketName objectName =
         S3FileInfo(s3Client, bucketName, objectName).Exists
                 
 let uploadFile (c : AmazonS3Client) bucketName filePath  =         
-        TransferUtility(c).Upload(filePath, bucketName)        
+        (new TransferUtility(c)).Upload(filePath, bucketName)        
 
 let downloadFile (c : AmazonS3Client) filePath bucketName key =         
-        TransferUtility(c).Download(filePath, bucketName, key)        
+        (new TransferUtility(c)).Download(filePath, bucketName, key)        
 
 let downloadDirectory (c : AmazonS3Client) bucketName s3Dir destDir =        
-        TransferUtility(c).DownloadDirectory(bucketName, s3Dir, destDir)        
+        (new TransferUtility(c)).DownloadDirectory(bucketName, s3Dir, destDir)        
 
 let uploadDirectory (c : AmazonS3Client) bucketName srcDir  =
-        TransferUtility(c).UploadDirectory(bucketName, srcDir)        
+        (new TransferUtility(c)).UploadDirectory(bucketName, srcDir)        
     
     
 

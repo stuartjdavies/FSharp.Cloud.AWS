@@ -9,9 +9,9 @@ open FSharp.Cloud.AWS.AwsUtils
 open System.Collections.Generic
       
 module FEc2 =
-        let createEC2ClientFromCsvFile fileName =
+        let createClientFromCsvFile fileName (region : Amazon.RegionEndpoint) =
                 let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
-                new AmazonEC2Client(accessKey, secretAccessKey, Amazon.RegionEndpoint.APSoutheast2)
+                new AmazonEC2Client(accessKey, secretAccessKey, region)
         
         let setVpcName (c : AmazonEC2Client) vpcId name =                 
                 (new CreateTagsRequest(Resources=new List<string>([vpcId]), Tags=new List<Tag>([ new Tag("Name", name) ])))

@@ -122,9 +122,9 @@ module DynamoDBTableSchemaValidator =
 // Amazon client factories
 //
 module FDynamoDB = 
-            let createDynamoDbClientFromCsvFile fileName =                    
+            let createClientFromCsvFile fileName (region : Amazon.RegionEndpoint) =                    
                      let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
-                     new AmazonDynamoDBClient(accessKey, secretAccessKey, Amazon.RegionEndpoint.APSoutheast2)
+                     new AmazonDynamoDBClient(accessKey, secretAccessKey, region)
                       
             //
             // Helper methods

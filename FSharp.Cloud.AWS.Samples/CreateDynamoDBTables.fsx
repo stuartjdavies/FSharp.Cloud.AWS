@@ -2,13 +2,21 @@
 #r @"..\FSharp.Cloud.AWS\bin\Debug\FSharp.Cloud.AWS.dll"
 (*** hide ***)
 (**
-FsLab Experiment
-================
+Example of creating different indexes in DynamoDB
+=================================================
+
+Global secondary index — an index with a hash and range key that can be different from those on the table. 
+A global secondary index is considered "global" because queries on the index can span all of the data in a table, across all partitions.
+
+Local secondary index — an index that has the same hash key as the table, but a different range key. 
+A local secondary index is "local" in the sense that every partition of a local secondary index is scoped to a table partition that has the same hash key.
+
 *)
 open FSharp.Cloud.AWS
 open FSharp.Cloud.AWS.AwsUtils
+open Amazon
 
-let dynamoDbClient= FDynamoDB.createDynamoDbClientFromCsvFile("""c:\AWS\Stuart.Credentials.csv""")
+let dynamoDbClient= FDynamoDB.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
 
 (** Create a list of new tables to create *)
 let newTables = [ { DynamoDBTableSchema.TableName = "PurchaseOrders";

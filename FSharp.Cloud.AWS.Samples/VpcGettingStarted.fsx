@@ -30,9 +30,10 @@ open Amazon.EC2
 open Amazon.EC2.Model
 open FSharp.Cloud.AWS.AwsUtils
 open System.Collections.Generic
+open Amazon
 
 (** Create ec2 client **)
-let ec2Client = FEc2.createEC2ClientFromCsvFile("""c:\AWS\Stuart.Credentials.csv""")   
+let ec2Client = FEc2.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
 let mutable vpcId = ""
 let mutable internetGatewayId = ""
 let mutable routeTableId=""
@@ -42,43 +43,43 @@ let mutable ec2ReservationId = ""
       
 (** Step 1: Set up the VPC and internet Gateway **)
 let ``Step 1: Setup the VPC and Internet Gateway``() =          
-    (** Create a new VPC **)
-    vpcId <- ec2Client.CreateVpc(CreateVpcRequest(CidrBlock="10.0.0.0/16", InstanceTenancy=Tenancy.Default))
-                      .Vpc.VpcId                     
-    ec2Client.CreateTags(CreateTagsRequest(Resources=List<string>([vpcId]), Tags=List<Tag>([ Tag("Name", "Getting Started VPC") ]))) |> ignore
+        (** Create a new VPC **)
+        vpcId <- ec2Client.CreateVpc(CreateVpcRequest(CidrBlock="10.0.0.0/16", InstanceTenancy=Tenancy.Default))
+                          .Vpc.VpcId                     
+        ec2Client.CreateTags(CreateTagsRequest(Resources=List<string>([vpcId]), Tags=List<Tag>([ Tag("Name", "Getting Started VPC") ]))) |> ignore
 
-    (** Update vpc attributes **)                             
-    ec2Client.ModifyVpcAttribute(ModifyVpcAttributeRequest(EnableDnsSupport=true,VpcId=vpcId)) |> ignore
-    ec2Client.ModifyVpcAttribute(ModifyVpcAttributeRequest(EnableDnsHostnames=true,VpcId=vpcId)) |> ignore          
+        (** Update vpc attributes **)                             
+        ec2Client.ModifyVpcAttribute(ModifyVpcAttributeRequest(EnableDnsSupport=true,VpcId=vpcId)) |> ignore
+        ec2Client.ModifyVpcAttribute(ModifyVpcAttributeRequest(EnableDnsHostnames=true,VpcId=vpcId)) |> ignore          
      
-    (** Get the created route table id **) 
-    routeTableId <- ec2Client.DescribeRouteTables().RouteTables.Find(fun rt -> rt.VpcId = vpcId).RouteTableId
+        (** Get the created route table id **) 
+        routeTableId <- ec2Client.DescribeRouteTables().RouteTables.Find(fun rt -> rt.VpcId = vpcId).RouteTableId
     
-    (** Add Tags to route table **)
-    ec2Client.CreateTags(CreateTagsRequest(Resources=List<string>([routeTableId]), Tags=List<Tag>([ Tag("Name", "Getting Started VPC Routing Table") ]))) |> ignore
+        (** Add Tags to route table **)
+        ec2Client.CreateTags(CreateTagsRequest(Resources=List<string>([routeTableId]), Tags=List<Tag>([ Tag("Name", "Getting Started VPC Routing Table") ]))) |> ignore
            
-    (** Create new Internet Gateway **)
-    internetGatewayId <- ec2Client.CreateInternetGateway(CreateInternetGatewayRequest())
-                                  .InternetGateway.InternetGatewayId                         
+        (** Create new Internet Gateway **)
+        internetGatewayId <- ec2Client.CreateInternetGateway(CreateInternetGatewayRequest())
+                                      .InternetGateway.InternetGatewayId                         
     
-    (** Attach Internet Gateway to VPC **)
-    ec2Client.AttachInternetGateway(AttachInternetGatewayRequest(VpcId=vpcId, InternetGatewayId=internetGatewayId)) |> ignore
+        (** Attach Internet Gateway to VPC **)
+        ec2Client.AttachInternetGateway(AttachInternetGatewayRequest(VpcId=vpcId, InternetGatewayId=internetGatewayId)) |> ignore
                                  
-    (** Create new Route **)
-    ec2Client.CreateRoute(CreateRouteRequest(RouteTableId=routeTableId, GatewayId=internetGatewayId, 
-                                             DestinationCidrBlock="0.0.0.0/0")) |> ignore 
+        (** Create new Route **)
+        ec2Client.CreateRoute(CreateRouteRequest(RouteTableId=routeTableId, GatewayId=internetGatewayId, 
+                                                 DestinationCidrBlock="0.0.0.0/0")) |> ignore 
 
-    (** Create Subnet1 & associate to route table **)
-    subnetId <- ec2Client.CreateSubnet(CreateSubnetRequest(VpcId=vpcId, CidrBlock="10.0.0.0/24",
-                                                           AvailabilityZone="ap-southeast-2b")).Subnet.SubnetId            
-    ec2Client.CreateTags(CreateTagsRequest(Resources=List<string>([subnetId]), Tags=List<Tag>([ Tag("Name", "Public subnet") ]))) |> ignore
+        (** Create Subnet1 & associate to route table **)
+        subnetId <- ec2Client.CreateSubnet(CreateSubnetRequest(VpcId=vpcId, CidrBlock="10.0.0.0/24",
+                                                               AvailabilityZone="ap-southeast-2b")).Subnet.SubnetId            
+        ec2Client.CreateTags(CreateTagsRequest(Resources=List<string>([subnetId]), Tags=List<Tag>([ Tag("Name", "Public subnet") ]))) |> ignore
 
-    ec2Client.AssociateRouteTable(AssociateRouteTableRequest(RouteTableId=routeTableId, SubnetId=subnetId)) |> ignore
+        ec2Client.AssociateRouteTable(AssociateRouteTableRequest(RouteTableId=routeTableId, SubnetId=subnetId)) |> ignore
      
-    printfn "VPC Setup Finished"
-    printfn "Created Vpc with Id : %s" vpcId
-    printfn "Created Internet Gateway with Id : %s" internetGatewayId
-    printfn "Created Subnet with Id : %s" subnetId           
+        printfn "VPC Setup Finished"
+        printfn "Created Vpc with Id : %s" vpcId
+        printfn "Created Internet Gateway with Id : %s" internetGatewayId
+        printfn "Created Subnet with Id : %s" subnetId           
 
 let ``Step 2: Set Up a Security Group for Your VPC``() =     
     securityGroupId <- ec2Client.CreateSecurityGroup(CreateSecurityGroupRequest(VpcId=vpcId,GroupName="WebServerSG",Description="VPC Getting started Security Group")).GroupId    

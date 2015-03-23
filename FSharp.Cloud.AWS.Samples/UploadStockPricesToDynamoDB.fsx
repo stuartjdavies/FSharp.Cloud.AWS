@@ -6,6 +6,13 @@
 (**
 Import Stock Data into Dynamo DB
 ================================
+
+Step 1: Get Microsoft Stock data using CsvTypeProvider
+Step 2: Create a DynamoDB table 
+Step 3: Import Data
+Step 4: Run a query
+Step 5: Print table statistics
+Step 6: Delete the table
 *)
 open System
 open Amazon.Util
@@ -13,15 +20,16 @@ open FSharp.Cloud.AWS
 open FSharp.Cloud.AWS.FDynamoDB
 open FSharp.Cloud.AWS.AwsUtils
 open FSharp.Data
+open Amazon
 
-(** Get microsoft stock data **)
+(** Step 1: Get Microsoft Stock data using CsvTypeProvider **)
 type Stocks = CsvProvider<"C:\Users\stuart\Documents\GitHub\FSharp.CodeSnippets\FSharp.CodeSnippets.AWS\Data\YahooStockPriceSchema.csv">
 let msft = Stocks.Load("http://ichart.finance.yahoo.com/table.csv?s=MSFT").Cache()
 let msftRows = msft.Rows |> Seq.take 1000 |> Seq.toArray
 
-let dynamoDbClient = FDynamoDB.createDynamoDbClientFromCsvFile """c:\AWS\Stuart.Credentials.csv"""
+let dynamoDbClient = FDynamoDB.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
 
-(** Create Amazon Client string **)
+(** Step 2: Create a DynamoDB table  **)
 { DynamoDBTableSchema.TableName = "MicrosoftStockPrices";
                       Columns = Map [ "ODate", ScalarTypeString ];                            
                       PrimaryKey = Hash "ODate";                                  
@@ -33,7 +41,7 @@ let dynamoDbClient = FDynamoDB.createDynamoDbClientFromCsvFile """c:\AWS\Stuart.
 FDynamoDB.waitUntilTableIsCreated "MicrosoftStockPrices" 3000 dynamoDbClient
 
 
-(** Insert Microsoft's stock prices in the DynamoDB NoSql Database **)
+(** Step 3: Import Data **)
 msftRows
 |> Array.Parallel.map(
             fun row -> FDynamoDB.toDocument [ "ODate" ==> row.Date.ToString(AWSSDKUtils.ISO8601DateFormat)
@@ -45,7 +53,7 @@ msftRows
                                               "AdjClose" ==> row.``Adj Close`` ])                                                                         
 |> FDynamoDB.uploadToDynamoDB "MicrosoftStockPrices" dynamoDbClient
                                                    
-(** Query the Dynamo DB **)
+(** Run a query **)
 { DynamoDbScan.From="MicrosoftStockPrices";
                Where=(Between("OpenPrice", 45, 46) <&&> 
                       Between("ClosePrice", 45, 45.5) <&&>
@@ -55,7 +63,7 @@ msftRows
                                                     i item.["ODate"].S item.["OpenPrice"].N 
                                                       item.["ClosePrice"].N item.["AdjClose"].N)                        
     
-(** Print the Table Summary **)
+(** Step 5: Print table statistics **)
 let info = "MicrosoftStockPrices" |> FDynamoDB.getTableInfo dynamoDbClient 
 printfn "Table Summary"
 printfn "-------------"
@@ -64,5 +72,5 @@ printfn "# of items: %d" info.ItemCount
 printfn "Provision Throughput (reads/sec): %d" info.ProvisionedThroughput.ReadCapacityUnits
 printfn "Provision Throughput (writes/sec): %d" info.ProvisionedThroughput.WriteCapacityUnits
                         
-(** Run a query on the data **)                                                           
+(** Step 6: Delete the table **)                                                           
 "MicrosoftStockPrices" |> FDynamoDB.deleteTable dynamoDbClient   

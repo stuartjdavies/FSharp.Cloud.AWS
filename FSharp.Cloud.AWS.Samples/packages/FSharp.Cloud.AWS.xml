@@ -236,6 +236,12 @@
 <member name="">
 
 </member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
 <member name="T:FSharp.Cloud.AWS.AwsUtils">
 
 </member>
@@ -263,7 +269,22 @@
 <member name="T:FSharp.Cloud.AWS.DynamoDBTableSchemaValidator">
 
 </member>
+<member name="">
+
+</member>
 <member name="T:FSharp.Cloud.AWS.FCloudTrail">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:FSharp.Cloud.AWS.FCloudWatch">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:FSharp.Cloud.AWS.FCloudWatchLogs">
 
 </member>
 <member name="">
@@ -380,6 +401,33 @@
 <member name="">
 
 </member>
+<member name="T:FSharp.Cloud.AWS.FQueryCloudTrail">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
 <member name="">
 
 </member>
@@ -402,6 +450,15 @@
 
 </member>
 <member name="T:FSharp.Cloud.AWS.Fs3">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:FSharp.Cloud.AWS.GZip">
 
 </member>
 <member name="">

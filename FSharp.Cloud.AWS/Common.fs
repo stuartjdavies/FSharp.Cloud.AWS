@@ -4,8 +4,11 @@ open FSharp.Data
 open System.Xml
 open System.Xml.Linq
 open System
+open System.IO
+open ICSharpCode.SharpZipLib.Core;
+open ICSharpCode.SharpZipLib.GZip;
 
-type AWSCred = CsvProvider<"""AwsCredentials.csv""">
+type AWSCred = CsvProvider<"""AwsCredentialsSchema.csv""">
 
 type AwsWorkflowFailureType =
      | AwsException of e : Exception
@@ -49,9 +52,31 @@ module AwsUtils =
         let getCredFromCsvFile (fileName : string) =                  
             let cred = (AWSCred.Load(fileName).Rows |> Seq.nth 0) 
             cred.``Access Key Id``, cred.``Secret Access Key`` 
+
+        let rec getFileNames path =             
+                        let files = Directory.GetFiles path
+                        let filesInSubDir = Directory.GetDirectories path
+                                            |> Array.Parallel.map getFileNames 
+                                            |> Array.concat            
+                        Array.append files filesInSubDir  
        
+module GZip =
+           let extract srcFile destFile =
+                    // Use a 4K buffer. Any larger is a waste.    
+                    let dataBuffer : byte array = Array.zeroCreate 4096
+                    use fsIn = new FileStream(srcFile, FileMode.Open, FileAccess.Read)
+                    use s = new GZipInputStream(fsIn)                                
+                    let fsOut = File.Create(destFile) 
+                    StreamUtils.Copy(s, fsOut, dataBuffer);
+                    fsIn.Close()
+                    fsOut.Close()     
+           
+           let unzipFilesInDir path = 
+                        path |> AwsUtils.getFileNames 
+                             |> Array.filter(fun fn -> fn.Contains(".gz"))
+                             |> Array.iter(fun fn -> extract fn (fn.Replace(".gz", String.Empty)))    
+          
             
-         
             
 
 
