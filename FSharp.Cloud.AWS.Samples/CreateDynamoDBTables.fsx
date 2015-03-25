@@ -23,7 +23,7 @@ let newTables = [ { DynamoDBTableSchema.TableName = "PurchaseOrders";
                                         Columns = Map [ "Id", ScalarTypeString ];
                                         PrimaryKey = Hash "Id";  
                                         ProvisionedCapacity=Standard;
-                                        GlobalSecondaryIndexes =  IndexList.empty;
+                                        GlobalSecondaryIndexes = IndexList.empty;
                                         LocalSecondaryIndexes = IndexList.empty }; 
                   { DynamoDBTableSchema.TableName = "SalesOrders";
                                         Columns = Map [ "Id", ScalarTypeString ; 
