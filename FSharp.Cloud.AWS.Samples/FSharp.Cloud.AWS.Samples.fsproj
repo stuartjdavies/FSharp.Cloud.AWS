@@ -57,7 +57,7 @@
     <None Include="app.config" />
     <None Include="paket.references" />
     <None Include="paket.dependencies" />
-    <None Include="MyAWSUsageReport.fsx">
+    <None Include="CloudTrailReports.fsx">
       <SubType>
       </SubType>
     </None>

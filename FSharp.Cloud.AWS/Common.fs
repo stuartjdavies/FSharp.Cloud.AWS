@@ -7,6 +7,7 @@ open System
 open System.IO
 open ICSharpCode.SharpZipLib.Core;
 open ICSharpCode.SharpZipLib.GZip;
+open System.Text
 
 type AWSCred = CsvProvider<"""AwsCredentialsSchema.csv""">
 
@@ -53,13 +54,14 @@ module AwsUtils =
             let cred = (AWSCred.Load(fileName).Rows |> Seq.nth 0) 
             cred.``Access Key Id``, cred.``Secret Access Key`` 
 
-        let rec getFileNames path =             
-                        let files = Directory.GetFiles path
-                        let filesInSubDir = Directory.GetDirectories path
-                                            |> Array.Parallel.map getFileNames 
-                                            |> Array.concat            
-                        Array.append files filesInSubDir  
-       
+        let rec getFileNamesBy f (path : string) =             
+                    Seq.append (Directory.GetFiles path)
+                               (Directory.GetDirectories path |> Seq.map (fun d -> getFileNamesBy f d) 
+                                                              |> Seq.concat)            
+        let getFileNames =
+                    getFileNamesBy (fun fn -> true)
+                               
+
 module GZip =
            let extract srcFile destFile =
                     // Use a 4K buffer. Any larger is a waste.    
@@ -71,10 +73,18 @@ module GZip =
                     fsIn.Close()
                     fsOut.Close()     
            
+           let readFromStream s =
+                    // Use a 4K buffer. Any larger is a waste.    
+                    let dataBuffer : byte array = Array.zeroCreate 4096                    
+                    use s = new GZipInputStream(s)                                
+                    use sOut = new MemoryStream()                   
+                    StreamUtils.Copy(s, sOut, dataBuffer)
+                    Encoding.UTF8.GetString(sOut.ToArray())
+                    
            let unzipFilesInDir path = 
                         path |> AwsUtils.getFileNames 
-                             |> Array.filter(fun fn -> fn.Contains(".gz"))
-                             |> Array.iter(fun fn -> extract fn (fn.Replace(".gz", String.Empty)))    
+                             |> Seq.filter(fun fn -> fn.Contains(".gz"))
+                             |> Seq.iter(fun fn -> extract fn (fn.Replace(".gz", String.Empty)))    
           
             
             
