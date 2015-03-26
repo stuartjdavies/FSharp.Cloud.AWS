@@ -73,6 +73,10 @@
       <SubType>
       </SubType>
     </None>
+    <None Include="AutoScalingGroupGettingStarted.fsx">
+      <SubType>
+      </SubType>
+    </None>
     <Compile Include="Main.fs" />
     <None Include="Tutorial.fsx" />
     <None Include="paket.lock" />

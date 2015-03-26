@@ -3,11 +3,17 @@ namespace FSharp.Cloud.AWS
 open System
 open Amazon.EC2
 open Amazon.EC2.Model
+open Amazon.AutoScaling
 open System.Collections.Generic
 open Amazon.Util
 open FSharp.Cloud.AWS.AwsUtils
 open System.Collections.Generic
       
+module FAutoScaling = 
+        let createClientFromCsvFile fileName (region : Amazon.RegionEndpoint) =
+                let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
+                new AmazonAutoScalingClient(accessKey, secretAccessKey, region)
+
 module FEc2 =
         let createClientFromCsvFile fileName (region : Amazon.RegionEndpoint) =
                 let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
