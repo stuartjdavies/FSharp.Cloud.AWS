@@ -18,6 +18,7 @@ open System
 open Amazon.Util
 open FSharp.Cloud.AWS
 open FSharp.Cloud.AWS.FDynamoDB
+open FSharp.Cloud.AWS.DynamoDB_DSL
 open FSharp.Cloud.AWS.AwsUtils
 open FSharp.Data
 open Amazon
@@ -54,6 +55,8 @@ msftRows
 |> FDynamoDB.uploadToDynamoDB "MicrosoftStockPrices" dynamoDbClient
                                                    
 (** Run a query **)
+
+// Prototype 1        
 { DynamoDbScan.From="MicrosoftStockPrices";
                Where=(Between("OpenPrice", 45, 46) <&&> 
                       Between("ClosePrice", 45, 45.5) <&&>
@@ -62,15 +65,16 @@ msftRows
 |> Seq.iteri(fun i item -> printfn "%d. Date - %s, Open - %s, Close - %s, Adj. Close=%s"
                                                     i item.["ODate"].S item.["OpenPrice"].N 
                                                       item.["ClosePrice"].N item.["AdjClose"].N)                        
-    
+// Prototype 2
+let msftStockPricesTable = DynamoDbTableAdaptor(tableName="MicrosoftStockPrices", client=dynamoDbClient)
+msftStockPricesTable.Scan (Between("OpenPrice", 45, 46) <&&> Between("ClosePrice", 45, 45.5) <&&> GreaterThan("AdjClose", 44.8))              
+|> Seq.iteri(fun i item -> printfn "%d. Date - %s, Open - %s, Close - %s, Adj. Close=%s"
+                                                                                    i item.["ODate"].S item.["OpenPrice"].N 
+                                                                                      item.["ClosePrice"].N item.["AdjClose"].N) 
+
 (** Step 5: Print table statistics **)
-let info = "MicrosoftStockPrices" |> FDynamoDB.getTableInfo dynamoDbClient 
-printfn "Table Summary"
-printfn "-------------"
-printfn "Name: %s" info.TableName
-printfn "# of items: %d" info.ItemCount
-printfn "Provision Throughput (reads/sec): %d" info.ProvisionedThroughput.ReadCapacityUnits
-printfn "Provision Throughput (writes/sec): %d" info.ProvisionedThroughput.WriteCapacityUnits
+Set_DynamoDB_Client("""c:\AWS\Stuart.Credentials.csv""", RegionEndpoint.APSoutheast2)
+Print_Table_Info "MicrosoftStockPrices"
                         
 (** Step 6: Delete the table **)                                                           
-"MicrosoftStockPrices" |> FDynamoDB.deleteTable dynamoDbClient   
+Delete_Table "MicrosoftStockPrices"

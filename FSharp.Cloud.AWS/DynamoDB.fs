@@ -73,16 +73,23 @@ type DymamoDBTableSchemaRequirementCheck = | ValidTableSchema | InvalidTableSche
 
 type DynamoDBTableSchemaRequirement = (DynamoDBTableSchema -> DymamoDBTableSchemaRequirementCheck)
   
-type QueryExpr = 
+type QueryWhere = 
      | Between of c : ColumnName * val1 : obj * val2 : obj 
      | GreaterThan of c : ColumnName * val1 : obj
      | LessThan of c : ColumnName * val1 : obj     
-     | And of e1 : QueryExpr * e2 : QueryExpr
-     | Or of e1  : QueryExpr * e2 : QueryExpr    
+     | And of e1 : QueryWhere * e2 : QueryWhere
+     | Or of e1  : QueryWhere * e2 : QueryWhere    
      static member (<&&>) (e1, e2) = And(e1,e2) 
-     static member (<||>) (e1, e2) = Or(e1,e2)       
+     static member (<||>) (e1, e2) = Or(e1,e2)    
+     
+type QuerySelect = 
+     | AllAttributes
+     | Count
+     | ProjectedAttributes
+     | Attributes of string list
+        
 
-type DynamoDbScan = { From : String; Where : QueryExpr }
+type DynamoDbScan = { From : String; Where : QueryWhere }
             
 module DynamoDBTableSchemaValidator =           
            let holdsTrueForAllItems (cond : ('a -> bool)) (xs : 'a seq) =                        
@@ -146,7 +153,7 @@ module FDynamoDB =
 
             let seqToDic (s:('a * 'b) seq) = Dictionary<'a,'b>(s |> Map.ofSeq)   
 
-            let getFilterExpr (q : QueryExpr) =                                     
+            let getFilterExpr (q : QueryWhere) =                                     
                       let rec evalQExpr i e =              
                                 match e with
                                 | Between(c, v1, v2) -> (i + 2), sprintf "(%s between :val%d and :val%d)" c (i + 1) (i + 2)
@@ -157,7 +164,7 @@ module FDynamoDB =
                                                                i2, (sprintf "(%s and %s)" s1 s2)                    
                       evalQExpr 0 q |> snd
 
-            let getFilterValues (q : QueryExpr) =                                              
+            let getFilterValues (q : QueryWhere) =                                              
                       let rec evalQExpr i e =              
                                 match e with
                                 | Between(c, v1, v2) -> (i + 2), [ (sprintf ":val%d" (i + 1)), getAttributeValue v1
@@ -175,6 +182,18 @@ module FDynamoDB =
                    sr.ExpressionAttributeValues <- getFilterValues q.Where |> seqToDic
                    sr.FilterExpression <- getFilterExpr q.Where
                    c.Scan(sr).Items                      
+
+            let scan(from : string,
+                     where :  QueryWhere,            
+                     client : AmazonDynamoDBClient) =                 
+                        let sr = ScanRequest()                                                                                                        
+                        sr.TableName <- from                         
+                        sr.ExpressionAttributeValues <- getFilterValues where |> seqToDic
+                        sr.FilterExpression <- getFilterExpr where
+                        client.Scan(sr).Items
+
+         
+
 
             let toDocument (rds : (string * DynamoDBEntry) seq ) =
                     Document((seqToDic rds))
@@ -283,3 +302,35 @@ module FDynamoDB =
 
             let getListOfTableNames (c : AmazonDynamoDBClient) =
                     c.ListTables().TableNames
+
+type DynamoDbTableAdaptor(tableName : string, client : AmazonDynamoDBClient) =                                                
+            member this.Scan (where : QueryWhere) =
+                        client.Scan(ScanRequest(TableName=tableName,
+                                                ExpressionAttributeValues=(FDynamoDB.getFilterValues where |> FDynamoDB.seqToDic),
+                                                FilterExpression=(FDynamoDB.getFilterExpr where)))
+                              .Items   
+            member this.Delete() =  client.DeleteTable tableName
+            member this.DescribeTable() = client.DescribeTable(tableName=tableName).Table
+
+module DynamoDB_DSL = 
+        let mutable DynamoDB_DSL_Client : AmazonDynamoDBClient Option = None
+     
+        let Set_DynamoDB_Client(fileName, region : Amazon.RegionEndpoint) =                    
+                     let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
+                     DynamoDB_DSL_Client <- Some(new AmazonDynamoDBClient(accessKey, secretAccessKey, region))
+
+        let Print_Table_Info tableName = 
+                match DynamoDB_DSL_Client with
+                | Some c -> let info = c.DescribeTable(tableName=tableName).Table
+                            printfn "Table Summary"
+                            printfn "-------------"
+                            printfn "Name: %s" info.TableName
+                            printfn "# of items: %d" info.ItemCount
+                            printfn "Provision Throughput (reads/sec): %d" info.ProvisionedThroughput.ReadCapacityUnits
+                            printfn "Provision Throughput (writes/sec): %d" info.ProvisionedThroughput.WriteCapacityUnits 
+                | None -> raise(new Exception("Amazon Dynamo DB Client must be set"))                       
+        
+        let Delete_Table (name : string) =  
+                match DynamoDB_DSL_Client with
+                | Some c -> c.DeleteTable name                          
+                | None -> raise(new Exception("Amazon Dynamo DB Client must be set"))     

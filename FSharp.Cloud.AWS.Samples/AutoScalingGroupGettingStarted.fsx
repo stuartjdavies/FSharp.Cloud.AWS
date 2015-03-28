@@ -39,4 +39,4 @@ printfn "%d" r.AutoScalingGroups.Count
 
 (** Step 4: (Optional) Delete Your Auto Scaling Infrastructure **) 
 asClient.DeleteAutoScalingGroup(DeleteAutoScalingGroupRequest(AutoScalingGroupName="Getting Started Auto Scaling group Name",ForceDelete=true))
-asClient.DeleteLaunchConfiguration(DeleteLaunchConfigurationRequest(LaunchConfigurationName="Getting Started Auto Scaling config"))        
+asClient.DeleteLaunchConfiguration(DeleteLaunchConfigurationRequest(LaunchConfigurationName="Getting Started Auto Scaling config"))  
