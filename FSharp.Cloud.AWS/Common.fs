@@ -11,6 +11,10 @@ open System.Text
 
 type AWSCred = CsvProvider<"""AwsCredentialsSchema.csv""">
 
+
+module DSL =
+    let (!!) (xs : 'a seq) = new System.Collections.Generic.List<'a>(xs)
+
 type AwsWorkflowFailureType =
      | AwsException of e : Exception
      | AwsFailureMessage of code : int * message : string

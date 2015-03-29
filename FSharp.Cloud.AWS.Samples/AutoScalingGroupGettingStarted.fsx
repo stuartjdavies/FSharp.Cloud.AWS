@@ -13,6 +13,7 @@ open System.Collections.Generic
 open Amazon
 open Amazon.AutoScaling
 open Amazon.AutoScaling.Model
+open FSharp.Cloud.AWS.DSL
 
 (** Create ec2 client **)
 let ec2Client = FEc2.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
@@ -26,14 +27,14 @@ asClient.CreateLaunchConfiguration(CreateLaunchConfigurationRequest(LaunchConfig
 (** Step 2: Create an Auto Scaling Group **)  
 asClient.CreateAutoScalingGroup(CreateAutoScalingGroupRequest(AutoScalingGroupName="Getting Started Auto Scaling group Name",
                                                               LaunchConfigurationName="Getting Started Auto Scaling config",
-                                                              AvailabilityZones=List<string>(["ap-southeast-2a"; "ap-southeast-2b"]),
+                                                              AvailabilityZones= !! ["ap-southeast-2a"; "ap-southeast-2b"],
                                                               // LoadBalancerNames=List<string>([""]),
                                                               MaxSize=1,
                                                               MinSize=1,
                                                               DesiredCapacity=1))
 
 (** Step 3: Verify Your Auto Scaling Group **)         
-let r = asClient.DescribeAutoScalingGroups(DescribeAutoScalingGroupsRequest(AutoScalingGroupNames=List<string>([|"Getting Started Auto Scaling group Name"|])))
+let r = asClient.DescribeAutoScalingGroups(DescribeAutoScalingGroupsRequest(AutoScalingGroupNames= !! ["Getting Started Auto Scaling group Name"]))
 r.AutoScalingGroups |> Seq.iter(fun g -> printfn "Group - %s" g.AutoScalingGroupName)
 printfn "%d" r.AutoScalingGroups.Count
 
