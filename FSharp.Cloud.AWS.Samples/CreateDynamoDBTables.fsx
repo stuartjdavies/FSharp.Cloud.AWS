@@ -16,7 +16,7 @@ open FSharp.Cloud.AWS
 open FSharp.Cloud.AWS.AwsUtils
 open Amazon
 
-let dynamoDbClient= FDynamoDB.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
+let dynamoDb = FDynamoDB.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
 
 (** Create a list of new tables to create *)
 let newTables = [ { DynamoDBTableSchema.TableName = "PurchaseOrders";
@@ -56,10 +56,10 @@ let newTables = [ { DynamoDBTableSchema.TableName = "PurchaseOrders";
                                                                                       ProvisionedCapacity=Standard }); 
                                         LocalSecondaryIndexes = IndexList.empty }; ]
 
-newTables |> Seq.map(fun t -> t |> FDynamoDB.createTable dynamoDbClient) 
+newTables |> Seq.map(fun t -> t |> FDynamoDB.createTable dynamoDb) 
           |> Seq.iter(fun r -> printfn "Created Table %s" r.TableDescription.TableName)
 
 (** Delete the tables from dynamoDb **)
-newTables |> Seq.map(fun t -> t.TableName |> FDynamoDB.deleteTable dynamoDbClient)
+newTables |> Seq.map(fun t -> t.TableName |> FDynamoDB.deleteTable dynamoDb)
           |> Seq.iter(fun r -> printfn "Deleted Table %s" r.TableDescription.TableName)
 

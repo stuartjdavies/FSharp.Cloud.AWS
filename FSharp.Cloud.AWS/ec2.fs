@@ -8,11 +8,17 @@ open System.Collections.Generic
 open Amazon.Util
 open FSharp.Cloud.AWS.AwsUtils
 open System.Collections.Generic
+open Amazon.ElasticLoadBalancing
       
 module FAutoScaling = 
         let createClientFromCsvFile fileName (region : Amazon.RegionEndpoint) =
                 let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
                 new AmazonAutoScalingClient(accessKey, secretAccessKey, region)
+
+module FElb = 
+        let createClientFromCsvFile fileName (region : Amazon.RegionEndpoint) =
+                let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
+                new AmazonElasticLoadBalancingClient(accessKey, secretAccessKey, region)
 
 module FEc2 =
         let createClientFromCsvFile fileName (region : Amazon.RegionEndpoint) =

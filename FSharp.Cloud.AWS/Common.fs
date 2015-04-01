@@ -8,12 +8,22 @@ open System.IO
 open ICSharpCode.SharpZipLib.Core;
 open ICSharpCode.SharpZipLib.GZip;
 open System.Text
+open System.Reflection
 
 type AWSCred = CsvProvider<"""AwsCredentialsSchema.csv""">
 
-
 module DSL =
     let (!!) (xs : 'a seq) = new System.Collections.Generic.List<'a>(xs)
+    let (!~) (x : 'a) = System.Collections.Generic.List<'a>((Seq.singleton x)) 
+
+    // let To = ()
+    // let Send request (_ : unit) client  = let methodName = request.GetType().Name.Replace("Request", "")
+    //                                      let m = client.GetType().GetMethod(methodName) 
+    //                                      m.Invoke(client, [|request|])
+
+    let SendTo client request = let methodName = request.GetType().Name.Replace("Request", String.Empty)
+                                let m = client.GetType().GetMethod(methodName) 
+                                m.Invoke(client, [|request|])
 
 type AwsWorkflowFailureType =
      | AwsException of e : Exception
@@ -88,9 +98,16 @@ module GZip =
            let unzipFilesInDir path = 
                         path |> AwsUtils.getFileNames 
                              |> Seq.filter(fun fn -> fn.Contains(".gz"))
-                             |> Seq.iter(fun fn -> extract fn (fn.Replace(".gz", String.Empty)))    
-          
-            
+                             |> Seq.iter(fun fn -> extract fn (fn.Replace(".gz", String.Empty)))         
+                       
+                                                                                                
+                    
+
+        
+
+
+
+
             
 
 

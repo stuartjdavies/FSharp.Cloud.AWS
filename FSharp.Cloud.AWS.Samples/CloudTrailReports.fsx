@@ -6,22 +6,23 @@
 
 open FSharp.Cloud.AWS
 open FSharp.Cloud.AWS.FCloudTrail
+open FSharp.Cloud.AWS.FQueryCloudTrail
 open System
 open Amazon
 open FSharp.Charting
 
 (** Create clients **)
-let ctClient = FCloudTrail.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
-let s3Client = Fs3.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
+let cloudTrail = FCloudTrail.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
+let s3 = Fs3.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
 
 (** get logs stored **)
-s3Client |> FCloudTrail.getLogFileInfos "stuartcloudtrail" |> Seq.iter(fun x -> printfn "%s" (x.Date.ToString()))
+s3 |> getLogFileInfos "stuartcloudtrail" |> Seq.iter(fun x -> printfn "%s" (x.Date.ToString()))
 
 (** Retrieve the events logged in the last 7 days **)
-let events = s3Client |> FCloudTrail.getEventsInTheLast30Days "stuartcloudtrail"                      
+let events = s3 |> getEventsInTheLast30Days "stuartcloudtrail"                      
                       
 (** Graph the usage per day**)                                    
-events |> FQueryCloudTrail.numberOfEventsPerDay |> Chart.Line 
+events |> numberOfEventsPerDay |> Chart.Line 
         
 
 
