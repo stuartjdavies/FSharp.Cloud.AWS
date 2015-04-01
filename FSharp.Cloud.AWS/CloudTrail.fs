@@ -26,7 +26,7 @@ module FCloudTrail =
                 let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
                 new AmazonCloudTrailClient(accessKey, secretAccessKey, region)  
                       
-        let getLogFileInfosBy (f : CloudTrailFileLogInfo -> bool) (bucketName : string) (c : AmazonS3Client) =        
+        let getLogFileInfosBy (c : AmazonS3Client) (bucketName : string) (f : CloudTrailFileLogInfo -> bool) =        
                 c.ListObjects(bucketName).S3Objects 
                 |> Seq.filter(fun s3obj -> s3obj.Key.Contains(".gz"))
                 |> Seq.map(fun s3obj -> let fields = s3obj.Key.Substring(s3obj.Key.LastIndexOf("/")).Split('_')                                                       
@@ -38,37 +38,36 @@ module FCloudTrail =
         let downloadLog (l : CloudTrailFileLogInfo) dest (c : AmazonS3Client) =                                
                 GetObjectRequest(BucketName=l.BucketName, Key=l.Key) |> c.GetObject |> (fun r -> r.WriteResponseStreamToFile(dest))
         
-        let getLog (l : CloudTrailFileLogInfo) (c : AmazonS3Client) = 
+        let getLog (c : AmazonS3Client) (l : CloudTrailFileLogInfo)  = 
                 use s = c.GetObject(GetObjectRequest(BucketName=l.BucketName, Key=l.Key)).ResponseStream                
                 GZip.readFromStream s                              
 
-        let getLogFileInfos bucketName = 
-                getLogFileInfosBy (fun _ -> true) bucketName
+        let getLogFileInfos c bucketName = 
+                getLogFileInfosBy c bucketName 
         
-        let getEventsBy f bucketName s3Client = 
-                    s3Client |> getLogFileInfosBy f bucketName
-                             |> Seq.toArray
-                             |> Array.Parallel.map(fun l -> let s = getLog l s3Client
-                                                            CloudTrailFileSchema.Parse(s).Records)
-                             |> Array.concat
+        let getEventsBy c bucketName f = 
+                getLogFileInfosBy c bucketName f
+                |> Seq.toArray
+                |> Array.Parallel.map(fun l -> let s = getLog c l 
+                                               CloudTrailFileSchema.Parse(s).Records)
+                |> Array.concat
 
         let sinceDays (day : int) (l : CloudTrailFileLogInfo) = (l.Date >= DateTime.Now.Subtract(new TimeSpan(day,0,0,0,0)))             
-        let getEventsToday bucketName = getEventsBy (sinceDays 0) bucketName
-        let getEventssinceYesterday bucketName = getEventsBy (sinceDays 0) bucketName
-        let getEventsInTheLast2Days bucketName = getEventsBy (sinceDays 2) bucketName
-        let getEventsInTheLast7Days bucketName = getEventsBy (sinceDays 7) bucketName
-        let getEventsInTheLast30Days bucketName = getEventsBy (sinceDays 30) bucketName
+            
+        let QueryEventsToday = sinceDays 0
+        let QueryEventsSinceYesterday = sinceDays 1
+        let QueryEventsInTheLast2Days = sinceDays 2
+        let QueryEventsInTheLast7Days = sinceDays 7 
+        let QueryEventsInTheLast30Days = sinceDays 30
          
         let downloadLogFilesBy f (fs : CloudTrailFileLogInfo seq) (c : AmazonS3Client) = 
                 (new TransferUtility(c)).Download(new TransferUtilityDownloadRequest() )                
 
         let getEventsFromFilesBy (filter : CloudTrailFileSchema.Record -> bool) (fileNames : string seq)  =                        
                 seq { for fn in fileNames do yield! CloudTrailFileSchema.Load(fn).Records |> Seq.filter filter }
+        
 
-        let getEventsFromFile (fileNames : string seq) =
-                getEventsBy (fun _ -> true) 
-
-module FQueryCloudTrail = 
+module FCloudTrailStats = 
             let numberOfEventsBy f (es : CloudTrailFileSchema.Record seq) = es |> Seq.groupBy f |> Seq.map(fun (g, es) -> g, Seq.length es)
             let numberOfEventsByEventSource es = numberOfEventsBy (fun e -> e.EventSource) es
             let numberOfEventsByEventName es =  numberOfEventsBy (fun e -> e.EventName) es                             

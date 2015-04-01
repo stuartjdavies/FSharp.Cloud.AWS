@@ -398,10 +398,34 @@
 <member name="">
 
 </member>
+<member name="T:FSharp.Cloud.AWS.FCloudTrail">
+
+</member>
 <member name="">
 
 </member>
-<member name="T:FSharp.Cloud.AWS.FCloudTrail">
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:FSharp.Cloud.AWS.FCloudTrailStats">
 
 </member>
 <member name="">
@@ -513,33 +537,6 @@
 
 </member>
 <member name="T:FSharp.Cloud.AWS.FElb">
-
-</member>
-<member name="">
-
-</member>
-<member name="">
-
-</member>
-<member name="">
-
-</member>
-<member name="">
-
-</member>
-<member name="">
-
-</member>
-<member name="">
-
-</member>
-<member name="">
-
-</member>
-<member name="">
-
-</member>
-<member name="T:FSharp.Cloud.AWS.FQueryCloudTrail">
 
 </member>
 <member name="">
