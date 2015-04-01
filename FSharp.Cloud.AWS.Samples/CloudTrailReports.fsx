@@ -16,10 +16,10 @@ let cloudTrail = FCloudTrail.createClientFromCsvFile """c:\AWS\Stuart.Credential
 let s3 = Fs3.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
 
 (** get logs stored **)
-s3 |> getLogFileInfos "stuartcloudtrail" |> Seq.iter(fun x -> printfn "%s" (x.Date.ToString()))
+getLogFileInfos "stuartcloudtrail" s3 |> Seq.iter(fun x -> printfn "%s" (x.Date.ToString()))
 
 (** Retrieve the events logged in the last 7 days **)
-let events = s3 |> getEventsInTheLast30Days "stuartcloudtrail"                      
+let events = getEventsInTheLast30Days "stuartcloudtrail" s3                     
                       
 (** Graph the usage per day**)                                    
 events |> numberOfEventsPerDay |> Chart.Line 
