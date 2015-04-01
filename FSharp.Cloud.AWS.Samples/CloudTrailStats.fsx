@@ -17,12 +17,13 @@ let s3 = Fs3.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionE
 (** Retrieve the events logged in the last 7 days **)
 let events = QueryEventsInTheLast30Days |> getEventsBy s3 "stuartcloudtrail"                     
                       
-(** Graph the usage per day**)                                    
+printfn "Number of events %d" (events.Length) 
+
 events |> FCloudTrailStats.numberOfEventsPerDay |> Chart.Line 
 
 events |> FCloudTrailStats.numberOfEventsByEventName 
        |> Seq.sortBy(fun (_,count) -> -count)
-       |> Seq.take 5
+       |> Seq.take 8
        |> Chart.Bar
         
 

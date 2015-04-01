@@ -57,7 +57,7 @@
     <None Include="app.config" />
     <None Include="paket.references" />
     <None Include="paket.dependencies" />
-    <None Include="CloudTrailReports.fsx">
+    <None Include="CloudTrailStats.fsx">
       <SubType>
       </SubType>
     </None>
