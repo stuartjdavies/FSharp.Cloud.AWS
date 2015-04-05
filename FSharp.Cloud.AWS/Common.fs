@@ -12,35 +12,22 @@ open System.Reflection
 
 type AWSCred = CsvProvider<"""AwsCredentialsSchema.csv""">
 
-module DSL =
-    let (!!) (xs : 'a seq) = new System.Collections.Generic.List<'a>(xs)
-    let (!~) (x : 'a) = System.Collections.Generic.List<'a>((Seq.singleton x)) 
-
-    // let To = ()
-    // let Send request (_ : unit) client  = let methodName = request.GetType().Name.Replace("Request", "")
-    //                                      let m = client.GetType().GetMethod(methodName) 
-    //                                      m.Invoke(client, [|request|])
-
-    let SendTo client request = let methodName = request.GetType().Name.Replace("Request", String.Empty)
-                                let m = client.GetType().GetMethod(methodName) 
-                                m.Invoke(client, [|request|])
-
-type AwsWorkflowFailureType =
+type AwsRequestFailureType =
      | AwsException of e : Exception
      | AwsFailureMessage of code : int * message : string
 
-type AwsWorkflowResult<'T> =
-        | AwsWorkflowSuccessResult of 'T
-        | AwsWorkflowFailureResult of ft : AwsWorkflowFailureType
+type AwsRequestResult<'T> =
+        | AwsRequestSuccessResult of 'T
+        | AwsRequestFailureResult of ft : AwsRequestFailureType
 
-type AwsWorkflowBuilder() =
+type AwsRequestBuilder() =
         member this.Bind(x, f) = 
                     match(x) with
-                    | AwsWorkflowSuccessResult x -> f(x) 
-                    | AwsWorkflowFailureResult x -> AwsWorkflowFailureResult x                     
+                    | AwsRequestSuccessResult x -> f(x) 
+                    | AwsRequestFailureResult x -> AwsRequestFailureResult x                     
         //member this.Delay(f) = f()
         member this.Return(x) = x 
-        member this.ReturnFrom(x) = AwsWorkflowSuccessResult(x)
+        member this.ReturnFrom(x) = AwsRequestSuccessResult(x)
 
 type ListFromZeroToFive<'T> =
         val Indexes : 'T list
@@ -52,18 +39,7 @@ type ListFromZeroToFive<'T> =
         new (item1, item2, item3, item4, item5) = { Indexes = [item1; item2; item3; item4; item5] }
         static member empty = ListFromZeroToFive<'T>()
 
-
 module AwsUtils = 
-        let AwsWorkflow = new AwsWorkflowBuilder()
-
-        let ReturnAwsWorkflowResult2(r : _ ) =  
-                 try    
-                    AwsWorkflowSuccessResult(r())  
-                 with 
-                 | ex -> AwsWorkflowFailureResult(AwsException(ex))
-
-        //let RunAwsWorkflowAndDisplayResult ()
-
         let getCredFromCsvFile (fileName : string) =                  
             let cred = (AWSCred.Load(fileName).Rows |> Seq.nth 0) 
             cred.``Access Key Id``, cred.``Secret Access Key`` 
@@ -72,8 +48,7 @@ module AwsUtils =
                     Seq.append (Directory.GetFiles path)
                                (Directory.GetDirectories path |> Seq.map (fun d -> getFileNamesBy f d) 
                                                               |> Seq.concat)            
-        let getFileNames =
-                    getFileNamesBy (fun fn -> true)
+        let getFileNames = getFileNamesBy (fun fn -> true)
                                
 
 module GZip =

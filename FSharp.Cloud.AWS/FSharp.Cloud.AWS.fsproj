@@ -109,6 +109,7 @@
     <Compile Include="ec2.fs" />
     <Compile Include="CloudWatch.fs" />
     <Compile Include="CloudTrail.fs" />
+    <Compile Include="AwsDSL.fs" />
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>

@@ -14,52 +14,38 @@ A local secondary index is "local" in the sense that every partition of a local 
 *)
 open FSharp.Cloud.AWS
 open FSharp.Cloud.AWS.AwsUtils
+open FSharp.Cloud.AWS.DSL
+open Amazon.DynamoDBv2.Model
 open Amazon
 
 let dynamoDb = FDynamoDB.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
 
 (** Create a list of new tables to create *)
-let newTables = [ { DynamoDBTableSchema.TableName = "PurchaseOrders";
-                                        Columns = Map [ "Id", ScalarTypeString ];
-                                        PrimaryKey = Hash "Id";  
-                                        ProvisionedCapacity=Standard;
-                                        GlobalSecondaryIndexes = IndexList.empty;
-                                        LocalSecondaryIndexes = IndexList.empty }; 
-                  { DynamoDBTableSchema.TableName = "SalesOrders";
-                                        Columns = Map [ "Id", ScalarTypeString ; 
-                                                        "DateSold", ScalarTypeString ];                          
-                                        PrimaryKey = HashAndRange("Id", "DateSold");                                                                          
-                                        ProvisionedCapacity=Standard;  
-                                        GlobalSecondaryIndexes = IndexList.empty;
-                                        LocalSecondaryIndexes = IndexList.empty;  }; 
-                  { DynamoDBTableSchema.TableName = "MusicCollection";
-                                        Columns = Map [ "Artist", ScalarTypeString; 
-                                                        "SongTitle", ScalarTypeString; 
-                                                        "AlbumTitle", ScalarTypeString ];                           
-                                        PrimaryKey = HashAndRange("Artist", "SongTitle");                                  
-                                        ProvisionedCapacity=Standard;
-                                        GlobalSecondaryIndexes = IndexList.empty;
-                                        LocalSecondaryIndexes = IndexList({ LocalIndex.Name="AlbumTitleIndex";
-                                                                                   Index=HashAndRange("Artist", "AlbumTitle"); 
-                                                                                   NonKeyAttributes= Set ["Genre"; "Year"];
-                                                                                   ProjectionType=IncludeOnly }) }; 
-                  { DynamoDBTableSchema.TableName = "WeatherData";
-                                        Columns = Map [ "Location", ScalarTypeString; 
-                                                        "Date", ScalarTypeString; 
-                                                        "Precipitation", ScalarTypeNumber ];                            
-                                        PrimaryKey = HashAndRange("Location", "Date");                                  
-                                        ProvisionedCapacity=Standard;
-                                        GlobalSecondaryIndexes = IndexList({ GlobalIndex.Name="PrecipIndex";
-                                                                                      Index=HashAndRange("Date", "Precipitation");                                                
-                                                                                      ProjectionType=All;
-                                                                                      NonKeyAttributes= Set.empty;
-                                                                                      ProvisionedCapacity=Standard }); 
-                                        LocalSecondaryIndexes = IndexList.empty }; ]
+let requests = [ CreateDynamoDbTableRequest(tableName="PurchaseOrders", columnTypes = Map [ "Id", ScalarTypeString ],
+                                            primaryKey = Hash "Id", provisionedCapacity=Standard);
+                 CreateDynamoDbTableRequest(tableName="SalesOrders", columnTypes = Map [ "Id", ScalarTypeString ; "DateSold", ScalarTypeString ],                          
+                                            primaryKey = HashAndRange("Id", "DateSold"), provisionedCapacity=Standard);                                        
+                 CreateDynamoDbTableRequest(tableName="MusicCollection", 
+                                            columnTypes = Map [ "Artist", ScalarTypeString; "SongTitle", ScalarTypeString; "AlbumTitle", ScalarTypeString ],                          
+                                            primaryKey = HashAndRange("Artist", "SongTitle"),                                                             
+                                            localIndexes = IndexList({ LocalIndex.Name="AlbumTitleIndex"; 
+                                                                       Index=HashAndRange("Artist", "AlbumTitle"); 
+                                                                       NonKeyAttributes= Set ["Genre"; "Year"];
+                                                                       ProjectionType=IncludeOnly }));
+                 CreateDynamoDbTableRequest(tableName="WeatherData",
+                                            columnTypes = Map [ "Location", ScalarTypeString; 
+                                                                "Date", ScalarTypeString; 
+                                                                "Precipitation", ScalarTypeNumber ],
+                                            primaryKey = HashAndRange("Location", "Date"),                                                           
+                                            globalIndexes = IndexList({ GlobalIndex.Name="PrecipIndex";
+                                                                        Index=HashAndRange("Date", "Precipitation");                                                
+                                                                        ProjectionType=All;
+                                                                        NonKeyAttributes=Set.empty;
+                                                                        ProvisionedCapacity=Standard })) ]
 
-newTables |> Seq.map(fun t -> t |> FDynamoDB.createTable dynamoDb) 
-          |> Seq.iter(fun r -> printfn "Created Table %s" r.TableDescription.TableName)
+let responses = requests |> List.map dynamoDb.CreateDynamoDbTable
+                         
+responses |> List.iter(fun r -> printfn "Created Table %s" r.TableDescription.TableName)
 
-(** Delete the tables from dynamoDb **)
-newTables |> Seq.map(fun t -> t.TableName |> FDynamoDB.deleteTable dynamoDb)
-          |> Seq.iter(fun r -> printfn "Deleted Table %s" r.TableDescription.TableName)
-
+responses |> List.map(fun r -> DeleteTableRequest(r.TableDescription.TableName) |> dynamoDb.DeleteTable)
+          |> List.iter(fun r -> printfn "Deleted Table %s" r.TableDescription.TableName)

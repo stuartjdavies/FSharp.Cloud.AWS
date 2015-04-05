@@ -69,7 +69,7 @@ AuthorizeSecurityGroupIngressRequest(GroupId=securityGroupId, IpPermissions= !! 
     
 (** Step 3: Launch an Instance into Your VPC **)
 if (ec2.DescribeKeyPairs().KeyPairs |> Seq.exists(fun kp -> kp.KeyName = "VpcGettingStarted") = false) then
-    CreateKeyPairRequest(KeyName="VpcGettingStarted") |> SendTo ec2.CreateKeyPair() |> ignore
+    CreateKeyPairRequest(KeyName="VpcGettingStarted") |> SendTo ec2 |> ignore
        
 // Microsoft Windows Server 2012 R2 Base - ami-89a2d5b3              
 let r = RunInstancesRequest(ImageId="ami-89a2d5b3", InstanceType=InstanceType.T1Micro,                                                  

@@ -68,6 +68,13 @@ type DynamoDBTableSchema = {
         ProvisionedCapacity : DynamoDBProvisionedCapacity;                
 }
 
+type CreateDynamoDbTableRequest(tableName, columnTypes, primaryKey, ?globalIndexes, ?localIndexes, ?provisionedCapacity) = 
+        member this.TableName with get() : string = tableName
+        member this.ColumnTypes with get() : ColumnTypeMap = columnTypes
+        member this.PrimaryKey with get() : DynamoDBHashIndex = primaryKey        
+        member this.GlobalSecondaryIndexes with get() : IndexList<GlobalIndex> = defaultArg globalIndexes (IndexList<GlobalIndex>())
+        member this.LocalSecondaryIndexes with get() : IndexList<LocalIndex> =  defaultArg localIndexes (IndexList<LocalIndex>())
+        member this.ProvisionedCapacity with get() : DynamoDBProvisionedCapacity = defaultArg provisionedCapacity Standard
 
 type DymamoDBTableSchemaRequirementCheck = | ValidTableSchema | InvalidTableSchema of reason : string
 
@@ -175,26 +182,22 @@ module FDynamoDB =
                                                               i2, vs1 @ vs2                                                                                                                             
                       evalQExpr 0 q |> snd
 
-            let runScan (c : AmazonDynamoDBClient) q =
+            let scan (c : AmazonDynamoDBClient) q =
                    let sr = ScanRequest()                                                                                                        
                    sr.TableName <- q.From 
                    sr.Select <- Select.ALL_ATTRIBUTES
                    sr.ExpressionAttributeValues <- getFilterValues q.Where |> seqToDic
                    sr.FilterExpression <- getFilterExpr q.Where
-                   c.Scan(sr).Items                      
-
-            let scan(from : string,
-                     where :  QueryWhere,            
-                     client : AmazonDynamoDBClient) =                 
-                        let sr = ScanRequest()                                                                                                        
-                        sr.TableName <- from                         
-                        sr.ExpressionAttributeValues <- getFilterValues where |> seqToDic
-                        sr.FilterExpression <- getFilterExpr where
-                        client.Scan(sr).Items
-
-         
-
-
+                   c.Scan(sr).Items          
+                   
+            let scan2 (c : AmazonDynamoDBClient) tableName where =
+                   let sr = ScanRequest()                                                                                                        
+                   sr.TableName <- tableName 
+                   sr.Select <- Select.ALL_ATTRIBUTES
+                   sr.ExpressionAttributeValues <- getFilterValues where |> seqToDic
+                   sr.FilterExpression <- getFilterExpr where
+                   c.Scan(sr).Items                                         
+        
             let toDocument (rds : (string * DynamoDBEntry) seq ) =
                     Document((seqToDic rds))
 
@@ -207,13 +210,13 @@ module FDynamoDB =
 
             let inline (==>) (k : string) (v : 'T) = (k,  toDynamoDbEntry(v)) 
 
-            let uploadToDynamoDB (tableName : string) (c : AmazonDynamoDBClient) (ds : Document array) =        
+            let uploadDocuments (tableName : string) (c : AmazonDynamoDBClient) (ds : Document array) =        
                     let msftStockPriceTable = Table.LoadTable(c, "MicrosoftStockPrices")                   
                     let batchWrite = msftStockPriceTable.CreateBatchWrite()        
                     ds |> Array.iter(fun d -> batchWrite.AddDocumentToPut(d))
                     batchWrite.Execute()
-                                                                                                                                                                                   
-            let createTable (c : AmazonDynamoDBClient) (s : DynamoDBTableSchema) =                               
+            
+            let createDynamoDbTable (c : AmazonDynamoDBClient) (r : CreateDynamoDbTableRequest) =
                     let STANDARD_READ_CAPACITY_UNITS = (int64 5)
                     let STANDARD_WRITE_CAPACITY_UNITS = (int64 6)
 
@@ -236,7 +239,7 @@ module FDynamoDB =
                             | All -> ProjectionType.ALL
                         
                     let createAttributeDefinitions() =                    
-                               s.Columns 
+                               r.ColumnTypes
                                |> Seq.map(fun kvps -> AttributeDefinition(kvps.Key, createScalarAttributeType kvps.Value))
                                |> (fun items -> List<_>(items))
                 
@@ -248,7 +251,7 @@ module FDynamoDB =
                             |> (fun items -> List<_>(items))
 
                     let createLocalSecondaryIndexes() =
-                           s.LocalSecondaryIndexes.Indexes
+                           r.LocalSecondaryIndexes.Indexes
                            |> Seq.map(fun index -> LocalSecondaryIndex(IndexName=index.Name,
                                                                        KeySchema=createKeySchema(index.Index),
                                                                        Projection=Projection(ProjectionType=createProjectectionType(index.ProjectionType), 
@@ -256,7 +259,7 @@ module FDynamoDB =
                            |> (fun items -> List<_>(items))                       
 
                     let createGlobalSecondaryIndexes() =
-                            s.GlobalSecondaryIndexes.Indexes 
+                            r.GlobalSecondaryIndexes.Indexes 
                             |> Seq.map(fun index -> let g=GlobalSecondaryIndex()
                                                     g.IndexName <- index.Name
                                                     g.KeySchema <- createKeySchema(index.Index)
@@ -266,15 +269,13 @@ module FDynamoDB =
                                                     g)
                             |> (fun items -> List<_>(items))       
                                         
-                    
-                    CreateTableRequest(TableName=s.TableName, KeySchema=createKeySchema(s.PrimaryKey),
-                                                             AttributeDefinitions=createAttributeDefinitions(),  
-                                                             LocalSecondaryIndexes=createLocalSecondaryIndexes(),
-                                                             GlobalSecondaryIndexes=createGlobalSecondaryIndexes(),                                  
-                                                             ProvisionedThroughput=createProvisionThroughPut(s.ProvisionedCapacity))
+                    CreateTableRequest(TableName=r.TableName, KeySchema=createKeySchema(r.PrimaryKey),
+                                       AttributeDefinitions=createAttributeDefinitions(),  
+                                       LocalSecondaryIndexes=createLocalSecondaryIndexes(),
+                                       GlobalSecondaryIndexes=createGlobalSecondaryIndexes(),                                  
+                                       ProvisionedThroughput=createProvisionThroughPut(r.ProvisionedCapacity))
                     |> c.CreateTable
-                
-        
+                        
 
             let waitUntilTableIsCreated tableName intervalMilliseconts (c : AmazonDynamoDBClient) =        
                     let rec aux(tblName) =                                  
@@ -303,34 +304,3 @@ module FDynamoDB =
             let getListOfTableNames (c : AmazonDynamoDBClient) =
                     c.ListTables().TableNames
 
-type DynamoDbTableAdaptor(tableName : string, client : AmazonDynamoDBClient) =                                                
-            member this.Scan (where : QueryWhere) =
-                        client.Scan(ScanRequest(TableName=tableName,
-                                                ExpressionAttributeValues=(FDynamoDB.getFilterValues where |> FDynamoDB.seqToDic),
-                                                FilterExpression=(FDynamoDB.getFilterExpr where)))
-                              .Items   
-            member this.Delete() =  client.DeleteTable tableName
-            member this.DescribeTable() = client.DescribeTable(tableName=tableName).Table
-
-module DynamoDB_DSL = 
-        let mutable DynamoDB_DSL_Client : AmazonDynamoDBClient Option = None
-     
-        let Set_DynamoDB_Client(fileName, region : Amazon.RegionEndpoint) =                    
-                     let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
-                     DynamoDB_DSL_Client <- Some(new AmazonDynamoDBClient(accessKey, secretAccessKey, region))
-
-        let Print_Table_Info tableName = 
-                match DynamoDB_DSL_Client with
-                | Some c -> let info = c.DescribeTable(tableName=tableName).Table
-                            printfn "Table Summary"
-                            printfn "-------------"
-                            printfn "Name: %s" info.TableName
-                            printfn "# of items: %d" info.ItemCount
-                            printfn "Provision Throughput (reads/sec): %d" info.ProvisionedThroughput.ReadCapacityUnits
-                            printfn "Provision Throughput (writes/sec): %d" info.ProvisionedThroughput.WriteCapacityUnits 
-                | None -> raise(new Exception("Amazon Dynamo DB Client must be set"))                       
-        
-        let Delete_Table (name : string) =  
-                match DynamoDB_DSL_Client with
-                | Some c -> c.DeleteTable name                          
-                | None -> raise(new Exception("Amazon Dynamo DB Client must be set"))     

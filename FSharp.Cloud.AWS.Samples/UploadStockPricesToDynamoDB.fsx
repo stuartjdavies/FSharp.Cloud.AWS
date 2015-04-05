@@ -18,7 +18,7 @@ open System
 open Amazon.Util
 open FSharp.Cloud.AWS
 open FSharp.Cloud.AWS.FDynamoDB
-open FSharp.Cloud.AWS.DynamoDB_DSL
+open FSharp.Cloud.AWS.DSL
 open FSharp.Cloud.AWS.AwsUtils
 open FSharp.Data
 open Amazon
@@ -31,13 +31,8 @@ let msftRows = msft.Rows |> Seq.take 1000 |> Seq.toArray
 let dynamoDb = FDynamoDB.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
 
 (** Step 2: Create a DynamoDB table  **)
-{ DynamoDBTableSchema.TableName = "MicrosoftStockPrices";
-                      Columns = Map [ "ODate", ScalarTypeString ];                            
-                      PrimaryKey = Hash "ODate";                                  
-                      ProvisionedCapacity=Standard;
-                      GlobalSecondaryIndexes=IndexList.empty;
-                      LocalSecondaryIndexes=IndexList.empty } 
-|> FDynamoDB.createTable dynamoDb
+CreateDynamoDbTableRequest(tableName="MicrosoftStockPrices",columnTypes = Map [ "ODate", ScalarTypeString ], primaryKey = Hash "ODate")                            
+|> dynamoDb.CreateDynamoDbTable
 
 FDynamoDB.waitUntilTableIsCreated "MicrosoftStockPrices" 3000 dynamoDb
 
@@ -51,27 +46,27 @@ msftRows
                                               "LowPrice" ==> row.Low
                                               "ClosePrice" ==> row.Close 
                                               "Volume" ==> row.Volume 
-                                              "AdjClose" ==> row.``Adj Close`` ])                                                                         
-|> FDynamoDB.uploadToDynamoDB "MicrosoftStockPrices" dynamoDb
+                                              "AdjClose" ==> row.``Adj Close`` ]) 
+|> dynamoDb.UploadDocuments "MicrosoftStockPrices" 
                                                    
 (** Run a query **)
 
 // Prototype 1        
 { DynamoDbScan.From="MicrosoftStockPrices";
-               Where=(Between("OpenPrice", 45, 46) <&&> 
-                      Between("ClosePrice", 45, 45.5) <&&>
-                      GreaterThan("AdjClose", 44.8)) }
-|> FDynamoDB.runScan dynamoDb
+               Where=(Between("OpenPrice", 45, 46) <&&> Between("ClosePrice", 45, 45.5) <&&> GreaterThan("AdjClose", 44.8)) }
+|> dynamoDb.Scan
 |> Seq.iteri(fun i item -> printfn "%d. Date - %s, Open - %s, Close - %s, Adj. Close=%s"
                                                     i item.["ODate"].S item.["OpenPrice"].N 
                                                       item.["ClosePrice"].N item.["AdjClose"].N)                        
-// Prototype 2
-let msftStockPricesTable = DynamoDbTableAdaptor(tableName="MicrosoftStockPrices", client=dynamoDb)
-msftStockPricesTable.Scan (Between("OpenPrice", 45, 46) <&&> Between("ClosePrice", 45, 45.5) <&&> GreaterThan("AdjClose", 44.8))              
-|> Seq.iteri(fun i item -> printfn "%d. Date - %s, Open - %s, Close - %s, Adj. Close=%s"
-                                                                                    i item.["ODate"].S item.["OpenPrice"].N 
-                                                                                      item.["ClosePrice"].N item.["AdjClose"].N) 
 
+// Prototype 2
+let ScanMsft = dynamoDb.CurScan "MicrosoftStockPrices"
+
+ScanMsft (Between("OpenPrice", 45, 46) <&&> Between("ClosePrice", 45, 45.5) <&&> GreaterThan("AdjClose", 44.8))    
+|> Seq.iteri(fun i item -> printfn "%d. Date - %s, Open - %s, Close - %s, Adj. Close=%s"
+                                        i item.["ODate"].S item.["OpenPrice"].N 
+                                          item.["ClosePrice"].N item.["AdjClose"].N) 
+            
 (** Step 5: Print table statistics **)
 Set_DynamoDB_Client("""c:\AWS\Stuart.Credentials.csv""", RegionEndpoint.APSoutheast2)
 Print_Table_Info "MicrosoftStockPrices"
