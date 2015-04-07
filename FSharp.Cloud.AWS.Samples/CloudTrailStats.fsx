@@ -18,7 +18,7 @@ let myCloudTrailQuery = FCloudTrail.query s3 "stuartcloudtrail"
 (** Retrieve the events logged in the last 7 days **)
 CloudTrailQueryRequest(dateFilter=eventsInTheLast7Days)
 |> myCloudTrailQuery
-|> FCloudTrailStats.numberOfEventsByEventName 
+|> CloudTrailStats.numberOfEventsByEventName 
 |> Seq.sortBy(fun (_,count) -> -count)
 |> Seq.take 8
 |> Chart.Bar        

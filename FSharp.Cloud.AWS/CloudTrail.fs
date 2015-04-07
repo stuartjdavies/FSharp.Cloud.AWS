@@ -80,7 +80,7 @@ module FCloudTrail =
                                          | Some f -> f(e) 
                                          | None -> true)
 
-module FCloudTrailStats = 
+module CloudTrailStats = 
             let numberOfEventsBy f (es : CloudTrailFileSchema.Record seq) = es |> Seq.groupBy f |> Seq.map(fun (g, es) -> g, Seq.length es)
             let numberOfEventsByEventSource es = numberOfEventsBy (fun e -> e.EventSource) es
             let numberOfEventsByEventName es =  numberOfEventsBy (fun e -> e.EventName) es                             
