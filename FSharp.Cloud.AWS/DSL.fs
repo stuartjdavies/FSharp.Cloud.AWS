@@ -30,8 +30,7 @@ module DSL =
     type Amazon.DynamoDBv2.AmazonDynamoDBClient with 
             member this.CreateDynamoDbTable r = r |> FDynamoDB.createDynamoDbTable this
             member this.UploadDocuments tableName ds = FDynamoDB.uploadDocuments tableName this ds
-            member this.Scan q = q |> FDynamoDB.scan this  
-            member this.CurScan tableName where = where |> FDynamoDB.scan2 this tableName 
+            member this.Scan c tableName q = FDynamoDB.scan this tableName                
                                                    
     let mutable DynamoDB_DSL_Client : AmazonDynamoDBClient Option = None
      

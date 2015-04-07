@@ -50,24 +50,18 @@ msftRows
 |> dynamoDb.UploadDocuments "MicrosoftStockPrices" 
                                                    
 (** Run a query **)
+let scanMsft = FDynamoDB.scan dynamoDb "MicrosoftStockPrices"
+let printResults (items : Collections.Generic.Dictionary<string, DynamoDBv2.Model.AttributeValue> seq) = 
+                items |> Seq.iteri(fun i item -> printfn "%d. Date - %s, Open - %s, Close - %s, Adj. Close=%s"
+                                                                            i item.["ODate"].S item.["OpenPrice"].N 
+                                                                              item.["ClosePrice"].N item.["AdjClose"].N)
+   
+(Between("OpenPrice", 45, 46) <&&> Between("ClosePrice", 45, 45.5) <&&> GreaterThan("AdjClose", 44.8)) |> scanMsft |> printResults
 
-// Prototype 1        
-{ DynamoDbScan.From="MicrosoftStockPrices";
-               Where=(Between("OpenPrice", 45, 46) <&&> Between("ClosePrice", 45, 45.5) <&&> GreaterThan("AdjClose", 44.8)) }
-|> dynamoDb.Scan
-|> Seq.iteri(fun i item -> printfn "%d. Date - %s, Open - %s, Close - %s, Adj. Close=%s"
-                                                    i item.["ODate"].S item.["OpenPrice"].N 
-                                                      item.["ClosePrice"].N item.["AdjClose"].N)                        
+GreaterThan("AdjClose", 44.5) |> scanMsft |> printResults 
 
-// Prototype 2
-let ScanMsft = dynamoDb.CurScan "MicrosoftStockPrices"
-
-(Between("OpenPrice", 45, 46) <&&> Between("ClosePrice", 45, 45.5) <&&> GreaterThan("AdjClose", 44.8)) 
-|> ScanMsft 
-|> Seq.iteri(fun i item -> printfn "%d. Date - %s, Open - %s, Close - %s, Adj. Close=%s"
-                                        i item.["ODate"].S item.["OpenPrice"].N 
-                                          item.["ClosePrice"].N item.["AdjClose"].N) 
-            
+LessThan("AdjClose", 30.5) |> scanMsft |> Seq.length 
+           
 (** Step 5: Print table statistics **)
 Set_DynamoDB_Client("""c:\AWS\Stuart.Credentials.csv""", RegionEndpoint.APSoutheast2)
 Print_Table_Info "MicrosoftStockPrices"

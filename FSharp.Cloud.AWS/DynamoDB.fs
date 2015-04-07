@@ -93,10 +93,7 @@ type QuerySelect =
      | AllAttributes
      | Count
      | ProjectedAttributes
-     | Attributes of string list
-        
-
-type DynamoDbScan = { From : String; Where : QueryWhere }
+     | Attributes of string list      
             
 module DynamoDBTableSchemaValidator =           
            let holdsTrueForAllItems (cond : ('a -> bool)) (xs : 'a seq) =                        
@@ -180,25 +177,9 @@ module FDynamoDB =
                                 | And(e1, e2) | Or(e1, e2) -> let i1, vs1 = evalQExpr i e1
                                                               let i2, vs2 = evalQExpr i1 e2
                                                               i2, vs1 @ vs2                                                                                                                             
-                      evalQExpr 0 q |> snd
-
-            let scan (c : AmazonDynamoDBClient) q =
-                   let sr = ScanRequest()                                                                                                        
-                   sr.TableName <- q.From 
-                   sr.Select <- Select.ALL_ATTRIBUTES
-                   sr.ExpressionAttributeValues <- getFilterValues q.Where |> seqToDic
-                   sr.FilterExpression <- getFilterExpr q.Where
-                   c.Scan(sr).Items
+                      evalQExpr 0 q |> snd                                                       
                    
-            let scan4 (c : AmazonDynamoDBClient) q =
-                   let sr = ScanRequest()                                                                                                        
-                   sr.TableName <- q.From 
-                   sr.Select <- Select.ALL_ATTRIBUTES
-                   sr.ExpressionAttributeValues <- getFilterValues q.Where |> seqToDic
-                   sr.FilterExpression <- getFilterExpr q.Where
-                   c.Scan(sr)                              
-                   
-            let scan2 (c : AmazonDynamoDBClient) tableName where =
+            let scan (c : AmazonDynamoDBClient) tableName where =
                    let sr = ScanRequest()                                                                                                        
                    sr.TableName <- tableName 
                    sr.Select <- Select.ALL_ATTRIBUTES
