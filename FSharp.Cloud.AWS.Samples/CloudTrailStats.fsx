@@ -15,16 +15,11 @@ let cloudTrail = FCloudTrail.createClientFromCsvFile """c:\AWS\Stuart.Credential
 let s3 = Fs3.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
 
 (** Retrieve the events logged in the last 7 days **)
-let events = QueryEventsInTheLast30Days |> getEventsBy s3 "stuartcloudtrail"                     
-                      
-printfn "Number of events %d" (events.Length) 
-
-events |> FCloudTrailStats.numberOfEventsPerDay |> Chart.Line 
-
-events |> FCloudTrailStats.numberOfEventsByEventName 
-       |> Seq.sortBy(fun (_,count) -> -count)
-       |> Seq.take 8
-       |> Chart.Bar
-        
+CloudTrailQueryRequest(s3client=s3, bucketName="stuartcloudtrail", dateFilter=QueryEventsInTheLast7Days)
+|> FCloudTrail.query 
+|> FCloudTrailStats.numberOfEventsByEventName 
+|> Seq.sortBy(fun (_,count) -> -count)
+|> Seq.take 8
+|> Chart.Bar        
 
 

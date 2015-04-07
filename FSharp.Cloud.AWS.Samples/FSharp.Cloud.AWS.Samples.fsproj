@@ -82,6 +82,10 @@
       </SubType>
     </None>
     <Compile Include="Main.fs" />
+    <None Include="Test.fsx">
+      <SubType>
+      </SubType>
+    </None>
     <None Include="paket.lock" />
   </ItemGroup>
   <ItemGroup>

@@ -188,7 +188,15 @@ module FDynamoDB =
                    sr.Select <- Select.ALL_ATTRIBUTES
                    sr.ExpressionAttributeValues <- getFilterValues q.Where |> seqToDic
                    sr.FilterExpression <- getFilterExpr q.Where
-                   c.Scan(sr).Items          
+                   c.Scan(sr).Items
+                   
+            let scan4 (c : AmazonDynamoDBClient) q =
+                   let sr = ScanRequest()                                                                                                        
+                   sr.TableName <- q.From 
+                   sr.Select <- Select.ALL_ATTRIBUTES
+                   sr.ExpressionAttributeValues <- getFilterValues q.Where |> seqToDic
+                   sr.FilterExpression <- getFilterExpr q.Where
+                   c.Scan(sr)                              
                    
             let scan2 (c : AmazonDynamoDBClient) tableName where =
                    let sr = ScanRequest()                                                                                                        

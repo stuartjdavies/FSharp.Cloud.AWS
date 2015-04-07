@@ -26,6 +26,7 @@ module FCloudTrail =
                 let accessKey, secretAccessKey = AwsUtils.getCredFromCsvFile fileName
                 new AmazonCloudTrailClient(accessKey, secretAccessKey, region)  
                       
+       
         let getLogFileInfosBy (c : AmazonS3Client) (bucketName : string) (f : CloudTrailFileLogInfo -> bool) =        
                 c.ListObjects(bucketName).S3Objects 
                 |> Seq.filter(fun s3obj -> s3obj.Key.Contains(".gz"))
@@ -44,14 +45,7 @@ module FCloudTrail =
 
         let getLogFileInfos c bucketName = 
                 getLogFileInfosBy c bucketName 
-        
-        let getEventsBy c bucketName f = 
-                getLogFileInfosBy c bucketName f
-                |> Seq.toArray
-                |> Array.Parallel.map(fun l -> let s = getLog c l 
-                                               CloudTrailFileSchema.Parse(s).Records)
-                |> Array.concat
-
+                
         let sinceDays (day : int) (l : CloudTrailFileLogInfo) = (l.Date >= DateTime.Now.Subtract(new TimeSpan(day,0,0,0,0)))             
             
         let QueryEventsToday = sinceDays 0
@@ -66,6 +60,24 @@ module FCloudTrail =
         let getEventsFromFilesBy (filter : CloudTrailFileSchema.Record -> bool) (fileNames : string seq)  =                        
                 seq { for fn in fileNames do yield! CloudTrailFileSchema.Load(fn).Records |> Seq.filter filter }
         
+        type CloudTrailQueryRequest(s3client : AmazonS3Client,
+                                    bucketName : string,                                    
+                                    dateFilter : CloudTrailFileLogInfo -> bool,
+                                    ?eventFilter : CloudTrailFileSchema.Record -> bool) =                     
+                    member __.S3Client with get() = s3client 
+                    member __.BucketName with get() = bucketName
+                    member __.FilterDatesBy with get() = dateFilter
+                    member __.FilterEventsBy with get()  = eventFilter 
+
+        let query (q : CloudTrailQueryRequest) = 
+                getLogFileInfosBy q.S3Client q.BucketName q.FilterDatesBy
+                |> Seq.toArray
+                |> Array.Parallel.map(fun l -> let s = getLog q.S3Client l 
+                                               CloudTrailFileSchema.Parse(s).Records)
+                |> Array.concat
+                |> Array.filter(fun e -> match(q.FilterEventsBy) with
+                                         | Some f -> f(e) 
+                                         | None -> true)
 
 module FCloudTrailStats = 
             let numberOfEventsBy f (es : CloudTrailFileSchema.Record seq) = es |> Seq.groupBy f |> Seq.map(fun (g, es) -> g, Seq.length es)
@@ -76,3 +88,4 @@ module FCloudTrailStats =
             let numberOfEventsPerMonth es = numberOfEventsBy (fun e -> new DateTime(e.EventTime.Year, e.EventTime.Month, e.EventTime.Day)) es           
             let numberOfEventsPerDay es = numberOfEventsBy (fun e -> new DateTime(e.EventTime.Year, e.EventTime.Month, e.EventTime.Day)) es
             let numberOfEventsPerHour es = numberOfEventsBy (fun e -> new DateTime(e.EventTime.Year, e.EventTime.Month, e.EventTime.Day, e.EventTime.Hour, 0,0)) es
+

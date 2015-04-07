@@ -428,6 +428,39 @@
 <member name="">
 
 </member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
 <member name="T:FSharp.Cloud.AWS.FCloudTrail">
 
 </member>
@@ -468,6 +501,9 @@
 
 </member>
 <member name="T:FSharp.Cloud.AWS.FCloudWatchLogs">
+
+</member>
+<member name="">
 
 </member>
 <member name="">
