@@ -13,10 +13,11 @@ open FSharp.Charting
 (** Create clients **)
 let cloudTrail = FCloudTrail.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
 let s3 = Fs3.createClientFromCsvFile """c:\AWS\Stuart.Credentials.csv""" RegionEndpoint.APSoutheast2
+let myCloudTrailQuery = FCloudTrail.query s3 "stuartcloudtrail"
 
 (** Retrieve the events logged in the last 7 days **)
-CloudTrailQueryRequest(s3client=s3, bucketName="stuartcloudtrail", dateFilter=QueryEventsInTheLast7Days)
-|> FCloudTrail.query 
+CloudTrailQueryRequest(dateFilter=eventsInTheLast7Days)
+|> myCloudTrailQuery
 |> FCloudTrailStats.numberOfEventsByEventName 
 |> Seq.sortBy(fun (_,count) -> -count)
 |> Seq.take 8

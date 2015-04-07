@@ -48,11 +48,11 @@ module FCloudTrail =
                 
         let sinceDays (day : int) (l : CloudTrailFileLogInfo) = (l.Date >= DateTime.Now.Subtract(new TimeSpan(day,0,0,0,0)))             
             
-        let QueryEventsToday = sinceDays 0
-        let QueryEventsSinceYesterday = sinceDays 1
-        let QueryEventsInTheLast2Days = sinceDays 2
-        let QueryEventsInTheLast7Days = sinceDays 7 
-        let QueryEventsInTheLast30Days = sinceDays 30
+        let eventsToday = sinceDays 0
+        let eventsSinceYesterday = sinceDays 1
+        let eventsInTheLast2Days = sinceDays 2
+        let eventsInTheLast7Days = sinceDays 7 
+        let eventsInTheLast30Days = sinceDays 30
          
         let downloadLogFilesBy f (fs : CloudTrailFileLogInfo seq) (c : AmazonS3Client) = 
                 (new TransferUtility(c)).Download(new TransferUtilityDownloadRequest() )                
@@ -60,19 +60,20 @@ module FCloudTrail =
         let getEventsFromFilesBy (filter : CloudTrailFileSchema.Record -> bool) (fileNames : string seq)  =                        
                 seq { for fn in fileNames do yield! CloudTrailFileSchema.Load(fn).Records |> Seq.filter filter }
         
-        type CloudTrailQueryRequest(s3client : AmazonS3Client,
-                                    bucketName : string,                                    
-                                    dateFilter : CloudTrailFileLogInfo -> bool,
+        type CloudTrailQueryRequest(dateFilter : CloudTrailFileLogInfo -> bool,
                                     ?eventFilter : CloudTrailFileSchema.Record -> bool) =                     
-                    member __.S3Client with get() = s3client 
-                    member __.BucketName with get() = bucketName
-                    member __.FilterDatesBy with get() = dateFilter
-                    member __.FilterEventsBy with get()  = eventFilter 
+                  member __.FilterDatesBy with get() = dateFilter
+                  member __.FilterEventsBy with get()  = eventFilter 
 
-        let query (q : CloudTrailQueryRequest) = 
-                getLogFileInfosBy q.S3Client q.BucketName q.FilterDatesBy
+        
+        type CloudTrailS3Log(s3client : AmazonS3Client, bucketName : string) =                     
+                    member __.S3Client with get() = s3client 
+                    member __.BucketName with get() = bucketName                    
+
+        let query (c : AmazonS3Client) (bucketName : string) (q : CloudTrailQueryRequest) = 
+                getLogFileInfosBy c bucketName q.FilterDatesBy
                 |> Seq.toArray
-                |> Array.Parallel.map(fun l -> let s = getLog q.S3Client l 
+                |> Array.Parallel.map(fun l -> let s = getLog c l 
                                                CloudTrailFileSchema.Parse(s).Records)
                 |> Array.concat
                 |> Array.filter(fun e -> match(q.FilterEventsBy) with
